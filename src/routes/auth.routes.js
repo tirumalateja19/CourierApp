@@ -1,34 +1,21 @@
 import { Router } from "express";
+import userAuth from "../middleware/auth.middleware.js";
 import Admin from "../model/Admin.model.js";
-import Partner from "../model/Partner.model.js";
-
+import validateNewPassword from "../utils/validations.js";
+import bcrypt from "bcrypt";
 const authRouter = Router();
 
-authRouter.post("/api/auth/login", async (req, res) => {
-  //logic for login
+authRouter.patch("/api/auth/change-password", userAuth, async (req, res) => {
   try {
-    const { userName, password } = req.body;
-    const user = userName == "Admin";
-    // const user =
-    //   (await Admin.findOne({ userName: userName })) ||
-    //   (await Partner.findOne({ userName: userName }));
-    if (!user) {
-      throw new Error("Incorrect UserName or Password");
-    }
-    const isPasswordValid = password == "asdfasdf";
-    if (isPasswordValid) {
-      res.status(200).send("Login successful");
-    } else {
-      throw new Error("Incorrect UserName or Password");
-    }
+    validateNewPassword(req);
+    const loggedInUser = req.admin;
+    const { password } = req.body;
+    const passwordHash = await bcrypt.hash(password, 10);
+    await Admin.findByIdAndUpdate(loggedInUser.id, { password: passwordHash });
+    res.send("Update Successfull");
   } catch (err) {
-    res.status(401).send("Error ->" + err.message);
+    res.status(400).send(err.message);
   }
-});
-authRouter.patch("/api/auth/change-password", (req, res) => {
-  //logic for changing password
-  
-
 });
 
 export default authRouter;
