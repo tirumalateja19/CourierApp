@@ -18,4 +18,13 @@ authRouter.patch("/api/auth/change-password", userAuth, async (req, res) => {
   }
 });
 
+authRouter.post("/api/auth/logout", userAuth, (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+  });
+  res.send("Logout successful");
+});
+
 export default authRouter;
