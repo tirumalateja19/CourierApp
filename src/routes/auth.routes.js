@@ -5,6 +5,7 @@ import validateNewPassword from "../utils/validations.js";
 import bcrypt from "bcrypt";
 const authRouter = Router();
 
+//password change
 authRouter.patch("/api/auth/change-password", userAuth, async (req, res) => {
   try {
     validateNewPassword(req);
@@ -18,6 +19,7 @@ authRouter.patch("/api/auth/change-password", userAuth, async (req, res) => {
   }
 });
 
+//logout
 authRouter.post("/api/auth/logout", userAuth, (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,

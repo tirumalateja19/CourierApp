@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 import authRouter from "./routes/auth.routes.js";
 import adminRouter from "./routes/admin.routes.js";
+import partnerRouter from "./routes/partner.routes.js";
 
 const app = express();
 const PORT = process.env.PORT;
@@ -12,7 +13,8 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use("/", authRouter);
-app.use("/",adminRouter)
+app.use("/", adminRouter);
+app.use("/", partnerRouter);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

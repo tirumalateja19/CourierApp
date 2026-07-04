@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import validator from "validator";
 const partnerSchema = new mongoose.Schema(
   {
     userName: {
@@ -23,8 +24,13 @@ const partnerSchema = new mongoose.Schema(
       required: true,
       maxLength: 10,
     },
-    avaliableStatus: {
+    availableStatus: {
       type: Boolean,
+      default: false,
+    },
+    isDeactivated: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },
