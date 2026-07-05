@@ -35,7 +35,7 @@ const jobs = new mongoose.Schema(
         message: "{VALUE} is incorrect status",
       },
       required: true,
-      deafult:"created",
+      deafult: "created",
       trim: true,
     },
     assignedToId: {
@@ -44,12 +44,20 @@ const jobs = new mongoose.Schema(
     assignedToRole: {
       type: String,
     },
+    assignedTo: {
+      type: String,
+    },
     packingStatus: {
       type: String,
       enum: {
         values: ["packed_at_source", "packed_at_office"],
       },
       message: "{VALUE} is not a valid status",
+    },
+    approxWeight: {
+      type: String,
+      trim: true,
+      required: true,
     },
     weight: {
       type: String,
