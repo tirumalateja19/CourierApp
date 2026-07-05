@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import Partner from "../model/Partner.model.js";
 const jobRouter = Router();
 
+//create new-job
 jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
   try {
     const {
@@ -31,6 +32,7 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
   }
 });
 
+//all jobs
 jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
   try {
     const totalJobs = await Job.find({});
@@ -40,6 +42,7 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
   }
 });
 
+//assign-partner
 jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params; //jobId
@@ -81,6 +84,7 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
   }
 });
 
+//self-assign
 jobRouter.patch(
   "/api/jobs/:id/self-assign",
   userAuth,
@@ -122,6 +126,7 @@ jobRouter.patch(
   },
 );
 
+//current job
 jobRouter.get("/api/jobs/:id", userAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params; //jobId
@@ -140,6 +145,7 @@ jobRouter.get("/api/jobs/:id", userAuth, isAdmin, async (req, res) => {
   }
 });
 
+//change-status
 jobRouter.patch("/api/jobs/:id/status", userAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params; //job_id
@@ -164,4 +170,69 @@ jobRouter.patch("/api/jobs/:id/status", userAuth, isAdmin, async (req, res) => {
       .json({ message: "Something went wrong", error: error.message });
   }
 });
+
+//lock-job
+jobRouter.patch("/api/jobs/:id/lock", userAuth, isAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { lockedReason } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).send("Invalid");
+    }
+    const jobData = await Job.findById(id);
+    if (!jobData) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+    if (jobData.assignedToRole === "admin") {
+      return res.status(406).json({ message: "Cannot lock your job" });
+    }
+    if (jobData.locked) {
+      return res.status(200).json({ message: "Job's already locked", jobData });
+    }
+    const lockedJob = await Job.findByIdAndUpdate(
+      id,
+      { locked: true, lockedAt: new Date(), lockedReason: lockedReason },
+      { returnDocument: "after" },
+    );
+    res.status(200).json({ message: "Job locked successfully", lockedJob });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+//unlock-job
+jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
+  try {
+    const id = req.params.id; //job id
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).send("Invalid");
+    }
+    const jobData = await Job.findById(id);
+    if (!jobData) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+    if (jobData.locked === false) {
+      return res
+        .status(200)
+        .json({ message: "Job's already unLocked", jobData });
+    }
+    const unLockedJob = await Job.findByIdAndUpdate(
+      id,
+      {
+        locked: false,
+        unlockedBy: req.user.id,
+        unlockedByAdminName: req.user.userName,
+      },
+      { returnDocument: "after" },
+    );
+    res.status(200).json({ message: "Job unLocked successfully", unLockedJob });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+});
+
 export default jobRouter;
