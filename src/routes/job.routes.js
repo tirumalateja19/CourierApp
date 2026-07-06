@@ -4,6 +4,7 @@ import isAdmin from "../middleware/isAdmin.middleware.js";
 import { Job } from "../model/Job.model.js";
 import mongoose from "mongoose";
 import Partner from "../model/Partner.model.js";
+import createAuditLog from "../utils/createAuditLog.js";
 const jobRouter = Router();
 
 //create new-job
@@ -35,10 +36,21 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
 //all jobs
 jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
   try {
-    const totalJobs = await Job.find({});
+    const { status, assignedToId, fromDate, toDate } = req.query;
+
+    const filter = {};
+    if (status) filter.status = status;
+    if (assignedToId) filter.assignedToId = assignedToId;
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(fromDate);
+      if (toDate) filter.createdAt.$lte = new Date(toDate);
+    }
+
+    const totalJobs = await Job.find(filter);
     res.status(200).json({ message: "Fetched Successfully", totalJobs });
   } catch (err) {
-    res.status(400).json({ error: req.message });
+    res.status(400).json({ error: err.message });
   }
 });
 
@@ -194,6 +206,14 @@ jobRouter.patch("/api/jobs/:id/lock", userAuth, isAdmin, async (req, res) => {
       { locked: true, lockedAt: new Date(), lockedReason: lockedReason },
       { returnDocument: "after" },
     );
+    createAuditLog({
+      jobId: id,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: "jobLocked",
+      previousStatus: undefined, // or "unlocked" if you decide to track it as a pseudo-status
+      newStatus: undefined, // same
+    });
     res.status(200).json({ message: "Job locked successfully", lockedJob });
   } catch (error) {
     res
@@ -227,6 +247,12 @@ jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
       },
       { returnDocument: "after" },
     );
+    createAuditLog({
+      jobId: id,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: "jobUnlocked",
+    });
     res.status(200).json({ message: "Job unLocked successfully", unLockedJob });
   } catch (error) {
     res

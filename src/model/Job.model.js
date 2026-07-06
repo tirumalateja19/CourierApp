@@ -99,12 +99,20 @@ const jobs = new mongoose.Schema(
     },
     lockedAt: {
       type: Date,
+      default: null,
     },
     lockedReason: {
       type: String,
+      enum: ["review", "dispatched", "dispute", "mismatch"],
+      default: null,
     },
     unlockedBy: {
       type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
+    unlockedByAdminName: {
+      type: String,
+      default: null,
     },
   },
   {
