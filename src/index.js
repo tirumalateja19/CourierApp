@@ -6,6 +6,7 @@ import authRouter from "./routes/auth.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import partnerRouter from "./routes/partner.routes.js";
 import jobRouter from "./routes/job.routes.js";
+import pickupRouter from "./routes/pickup.routes.js";
 const app = express();
 const PORT = process.env.PORT;
 
@@ -16,6 +17,7 @@ app.use("/", authRouter);
 app.use("/", adminRouter);
 app.use("/", partnerRouter);
 app.use("/", jobRouter);
+app.use("/", pickupRouter)
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

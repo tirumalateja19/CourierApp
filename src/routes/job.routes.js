@@ -5,6 +5,7 @@ import { Job } from "../model/Job.model.js";
 import mongoose from "mongoose";
 import Partner from "../model/Partner.model.js";
 import createAuditLog from "../utils/createAuditLog.js";
+import { JobItem } from "../model/JobItem.model.js";
 const jobRouter = Router();
 
 //create new-job
@@ -147,9 +148,10 @@ jobRouter.get("/api/jobs/:id", userAuth, isAdmin, async (req, res) => {
     }
     const jobData = await Job.findById(id);
     if (!jobData) {
-      return res.status(400).json({ message: "Job not found" });
+      return res.status(404).json({ message: "Job not found" });
     }
-    res.status(200).json({ message: "Job Fetch Successfull", jobData });
+    const items = await JobItem.find({ jobId: id });
+    res.status(200).json({ message: "Job Fetch Successfull", jobData, items });
   } catch (error) {
     res
       .status(400)

@@ -4,6 +4,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { Job } from "../model/Job.model.js";
+import userAuth from "../middleware/auth.middleware.js";
+import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
 
 const partnerRouter = Router();
 
@@ -63,7 +65,7 @@ partnerRouter.get("/api/partner/jobs", userAuth, async (req, res) => {
 });
 
 //get specific job
-partnerRouter.get("/api/partner/jobs/:id", userAuth, async (req, res) => {
+partnerRouter.get("/api/partner/jobs/:id", userAuth,verifyPartnerAccess, async (req, res) => {
   try {
     const { id } = req.params; //job id
     if (!mongoose.Types.ObjectId.isValid(id)) {
