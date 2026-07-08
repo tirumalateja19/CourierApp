@@ -7,6 +7,7 @@ import adminRouter from "./routes/admin.routes.js";
 import partnerRouter from "./routes/partner.routes.js";
 import jobRouter from "./routes/job.routes.js";
 import pickupRouter from "./routes/pickup.routes.js";
+import "./workers/pdfWorker.js"; // just importing starts it listening
 const app = express();
 const PORT = process.env.PORT;
 
