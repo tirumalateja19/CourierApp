@@ -24,10 +24,6 @@ const jobPhoto = new mongoose.Schema(
       type: String,
       required: true,
     },
-    uploadedAt: {
-      type: Date,
-      required: true,
-    },
   },
   {
     timestamps: true,

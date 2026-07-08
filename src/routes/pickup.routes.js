@@ -4,6 +4,8 @@ import userAuth from "../middleware/auth.middleware.js";
 import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
 import { JobItem } from "../model/JobItem.model.js";
 import { Job } from "../model/Job.model.js";
+import upload from "../config/multer.js";
+import { JobPhoto } from "../model/JobPhoto.model.js";
 const pickupRouter = Router();
 
 //add details
@@ -140,5 +142,40 @@ pickupRouter.delete(
     }
   },
 );
+
+//upload photo
+pickupRouter.post("/api/jobs/pickup/:id/photos",userAuth,verifyPartnerAccess,upload.single("photo"),async(req,res)=>{
+  try {
+    const { id } = req.params;
+    const { label } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const validLabels = [
+      "id_proof",
+      "waybill",
+      "invoice",
+      "packed_box",
+      "item_evidence",
+    ];
+    if (!validLabels.includes(label)) {
+      return res.status(400).json({ message: "Invalid label" });
+    }
+
+    const photo = await JobPhoto.create({
+      jobId: id,
+      label,
+      fileUrl: req.file.path, // Cloudinary gives back the hosted URL here
+    });
+
+    res.status(201).json({ message: "Photo uploaded successfully", photo });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+})
 
 export default pickupRouter;
