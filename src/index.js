@@ -8,6 +8,7 @@ import partnerRouter from "./routes/partner.routes.js";
 import jobRouter from "./routes/job.routes.js";
 import pickupRouter from "./routes/pickup.routes.js";
 import "./workers/pdfWorker.js"; // just importing starts it listening
+import shipmentRouter from "./routes/shipment.routes.js";
 const app = express();
 const PORT = process.env.PORT;
 
@@ -18,7 +19,8 @@ app.use("/", authRouter);
 app.use("/", adminRouter);
 app.use("/", partnerRouter);
 app.use("/", jobRouter);
-app.use("/", pickupRouter)
+app.use("/", pickupRouter);
+app.use("/", shipmentRouter);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
