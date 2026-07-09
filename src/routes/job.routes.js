@@ -9,6 +9,7 @@ import { JobItem } from "../model/JobItem.model.js";
 import ClientInvoice from "../model/ClientInvoice.model.js";
 import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
 import { PodSlip } from "../model/PodSlip.model.js";
+import { Shipment } from "../model/Shipment.model.js";
 const jobRouter = Router();
 
 //create new-job
@@ -373,4 +374,52 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
   }
 });
 
+//shipment
+jobRouter.post(
+  "/api/jobs/:id/shipment",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { trackingId, networkName: bodyNetworkName } = req.body;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid job id");
+      }
+
+      const jobData = await Job.findById(id);
+      if (!jobData) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      const networkName = (
+        jobData.networkName || bodyNetworkName
+      )?.toUpperCase();
+
+      if (!networkName) {
+        return res.status(400).json({ message: "Network name is required" });
+      }
+      if (!trackingId) {
+        return res.status(400).json({ message: "Tracking ID is required" });
+      }
+
+      const shipment = await Shipment.create({
+        jobId: id,
+        networkName,
+        trackingId,
+      });
+
+      await Job.findByIdAndUpdate(id, { status: "dispatched" });
+
+      res
+        .status(201)
+        .json({ message: "Shipment recorded, job dispatched", shipment });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
 export default jobRouter;

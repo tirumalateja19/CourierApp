@@ -5,7 +5,7 @@ const shipment = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
-    carrierName: {
+    networkName: {
       type: String,
       required: true,
     },
