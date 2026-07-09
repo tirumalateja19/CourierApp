@@ -29,6 +29,15 @@ pickupRouter.patch(
         packingStatus,
         status,
         price,
+        clientCity,
+        networkName,
+        numberOfPackages,
+        dimensionsLength,
+        dimensionsBreadth,
+        dimensionsHeight,
+        receiverCity,
+        receiverZipCode,
+        receiverCountry,
       } = req.body;
       const updates = {};
       if (receiverName !== undefined) updates.receiverName = receiverName;
@@ -40,6 +49,21 @@ pickupRouter.patch(
       if (dimensions !== undefined) updates.dimensions = dimensions;
       if (packingStatus !== undefined) updates.packingStatus = packingStatus;
       if (status !== undefined) updates.status = status;
+      if (clientCity !== undefined) updates.clientCity = clientCity;
+      if (networkName !== undefined) updates.networkName = networkName;
+      if (numberOfPackages !== undefined)
+        updates.numberOfPackages = numberOfPackages;
+      if (dimensionsLength !== undefined)
+        updates.dimensionsLength = dimensionsLength;
+      if (dimensionsBreadth !== undefined)
+        updates.dimensionsBreadth = dimensionsBreadth;
+      if (dimensionsHeight !== undefined)
+        updates.dimensionsHeight = dimensionsHeight;
+      if (receiverCity !== undefined) updates.receiverCity = receiverCity;
+      if (receiverZipCode !== undefined)
+        updates.receiverZipCode = receiverZipCode;
+      if (receiverCountry !== undefined)
+        updates.receiverCountry = receiverCountry;
 
       const jobData = await Job.findByIdAndUpdate(id, updates, {
         returnDocument: "after",
@@ -187,7 +211,7 @@ pickupRouter.post(
   },
 );
 
-//submit - for generating pdf's
+//submit - generating invoice and pod-slip
 pickupRouter.post(
   "/api/jobs/pickup/:id/submit",
   userAuth,
@@ -208,7 +232,12 @@ pickupRouter.post(
         });
       }
       await Job.findByIdAndUpdate(id, { invoiceStatus: "generated_at_pickup" });
-      await pdfQueue.add("generate-invoice", { jobId: id });
+      await pdfQueue.add("generate-invoice", {
+        jobId: id,
+        generatedById: req.user.id,
+        generatedByRole: req.user.role,
+        generatedByName: req.user.userName,
+      });
       await pdfQueue.add("generate-pod-slip", { jobId: id });
 
       res.status(200).json({ message: "Job submitted, PDFs generating" });
@@ -236,7 +265,10 @@ pickupRouter.post(
       await Job.findByIdAndUpdate(id, {
         invoiceStatus: "pending_office_completion",
       });
-      await pdfQueue.add("generate-pod-slip", { jobId: id });
+      await pdfQueue.add("generate-pod-slip", {
+        jobId: id,
+        generatedById: req.user.id,
+      });
 
       res
         .status(200)

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>International Airway Bill</title>
+</head>
+
+<body style="margin:0;padding:20px;background:#ececec;font-family:Arial,Helvetica,sans-serif;">
+    <div style="width:800px;margin:auto;background:#fff;border:2px solid #1d3f8b;">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+
+            <tr>
+                <td
+                    style="width:50%;background:#1d3f8b;color:#fff;border:1px solid #1d3f8b;padding:12px;text-align:center;">
+                    <div style="font-size:22px;font-weight:bold;">INTERNATIONAL COURIER SERVICES</div>
+                    <div style="margin-top:8px;font-size:13px;">
+                        <b>CELL:</b> {{cell}} &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <b>EMAIL:</b> {{email}}
+                    </div>
+                </td>
+                <td
+                    style="width:50%;background:#1d3f8b;color:#fff;border:1px solid #1d3f8b;text-align:center;font-size:22px;font-weight:bold;">
+                    INTERNATIONAL AIRWAY BILL
+                </td>
+            </tr>
+
+            <tr>
+                <td style="border:1px solid #1d3f8b;padding:8px;height:65px;vertical-align:top;">
+                    <b>Consignee:</b><br>
+                    {{senderName}}
+                </td>
+                <td style="border:1px solid #1d3f8b;padding:8px;height:65px;vertical-align:top;">
+                    <b>Reference No:</b> {{referenceNo}}<br><br>
+                    <b>Consignee:</b><br>
+                    {{receiverName}}
+                </td>
+            </tr>
+
+            <tr>
+                <td style="border:1px solid #1d3f8b;padding:8px;height:145px;vertical-align:top;">
+                    <div style="padding-bottom:6px;border-bottom:1px solid #1d3f8b;">
+                        <b>Tel No:</b> {{senderPhone}}
+                    </div>
+                    <div style="padding-top:6px;">
+                        <b>Address:</b><br>
+                        {{senderAddress}}<br><br>
+                    </div>
+                </td>
+
+                <td style="border:1px solid #1d3f8b;padding:8px;height:145px;vertical-align:top;">
+                    <div style="padding-bottom:6px;border-bottom:1px solid #1d3f8b;">
+                        <b>Tel No:</b> {{receiverPhone}}
+                    </div>
+                    <div style="padding-top:6px;">
+                        <b>Address:</b><br>
+                        {{receiverAddress}}<br><br>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td style="border:1px solid #1d3f8b;padding:8px;"><b>City:</b> {{senderCity}}</td>
+                <td style="border:1px solid #1d3f8b;padding:0;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tr>
+                            <td style="border-right:1px solid #1d3f8b;padding:8px;"><b>City:</b> {{receiverCity}}</td>
+                            <td style="padding:8px;"><b>Zip:</b> {{zipCode}}</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr>
+                <td style="border:1px solid #1d3f8b;padding:8px;"><b>Dimensions:</b> {{dimensions}}<br><b>Vol
+                        Weight:</b> {{volWeight}}</td>
+                <td style="border:1px solid #1d3f8b;padding:8px;"><b>Packages:</b> {{packages}}<br><b>Weight:</b>
+                    {{weight}}</td>
+            </tr>
+
+            <tr>
+                <td style="border:1px solid #1d3f8b;padding:8px;height:70px;vertical-align:top;">
+                    <b>Guidelines</b><br>{{guidelines}}
+                </td>
+                <td
+                    style="border:1px solid #1d3f8b;padding:8px;font-size:24px;font-weight:bold;color:#1d3f8b;vertical-align:top;">
+                    Total: {{total}}
+                </td>
+            </tr>
+
+            <tr>
+                <td style="border:1px solid #1d3f8b;padding:8px;">
+                    <b>Pick Up Name:</b> {{pickupName}}
+                    <span style="float:right;"><b>ID:</b> {{pickupId}}</span>
+                </td>
+                <td style="border:1px solid #1d3f8b;background:#1d3f8b;color:#fff;text-align:center;font-weight:bold;">
+                    NON NEGOTIABLE CONSIGNMENT NOTE
+                </td>
+            </tr>
+
+        </table>
+    </div>
+</body>
+
+</html>

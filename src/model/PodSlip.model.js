@@ -6,7 +6,7 @@ const podSlip = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
-    courierId: {
+    generatedById: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
@@ -20,22 +20,7 @@ const podSlip = new mongoose.Schema(
     },
     version: {
       type: Number,
-      default:1,
-    },
-    pickupTimestamp: {
-      type: Date,
-      required: true,
-      immutable: true,
-    },
-    gpsLng: {
-      type: Number,
-      required: true,
-      immutable: true,
-    },
-    gpsLat: {
-      type: Number,
-      required: true,
-      immutable: true,
+      default: 1,
     },
   },
   {

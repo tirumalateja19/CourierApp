@@ -6,6 +6,9 @@ import mongoose from "mongoose";
 import Partner from "../model/Partner.model.js";
 import createAuditLog from "../utils/createAuditLog.js";
 import { JobItem } from "../model/JobItem.model.js";
+import ClientInvoice from "../model/ClientInvoice.model.js";
+import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
+import { PodSlip } from "../model/PodSlip.model.js";
 const jobRouter = Router();
 
 //create new-job
@@ -18,6 +21,7 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       approxWeight,
       scheduledTime,
       status,
+      networkName,
     } = req.body;
     const job = new Job({
       clientName: clientName,
@@ -26,6 +30,7 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       approxWeight: approxWeight,
       scheduledTime: scheduledTime,
       status: status,
+      networkName: networkName,
     });
     await job.save();
     res.status(201).json({ message: "Job created successfully" });
@@ -256,6 +261,111 @@ jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
       action: "jobUnlocked",
     });
     res.status(200).json({ message: "Job unLocked successfully", unLockedJob });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+//get invoice
+jobRouter.get(
+  "/api/jobs/:id/invoice",
+  userAuth,
+  verifyPartnerAccess,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid job id");
+      }
+
+      const invoice = await ClientInvoice.findOne({ jobId: id }).sort({
+        createdAt: -1,
+      });
+
+      if (!invoice) {
+        return res.status(404).json({ message: "Invoice not generated yet" });
+      }
+
+      res.status(200).json({ message: "Invoice fetched", invoice });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
+//get pod-slip
+jobRouter.get("/api/jobs/:id/pod-slip", userAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).send("Invalid job id");
+    }
+
+    const podSlip = await PodSlip.findOne({ jobId: id }).sort({
+      createdAt: -1,
+    });
+
+    if (!podSlip) {
+      return res.status(404).json({ message: "Pod slip not generated yet" });
+    }
+
+    res.status(200).json({ message: "Pod slip fetched", podSlip });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+//generate invoice - admin
+jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      price,
+      weight,
+      dimensionsLength,
+      dimensionsBreadth,
+      dimensionsHeight,
+    } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).send("Invalid job id");
+    }
+
+    const jobData = await Job.findById(id);
+    if (!jobData) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+
+    const updates = {};
+    if (price !== undefined) updates.price = price;
+    if (weight !== undefined) updates.weight = weight;
+    if (dimensionsLength !== undefined)
+      updates.dimensionsLength = dimensionsLength;
+    if (dimensionsBreadth !== undefined)
+      updates.dimensionsBreadth = dimensionsBreadth;
+    if (dimensionsHeight !== undefined)
+      updates.dimensionsHeight = dimensionsHeight;
+
+    if (Object.keys(updates).length > 0) {
+      await Job.findByIdAndUpdate(id, updates, { runValidators: true });
+    }
+
+    await pdfQueue.add("generate-invoice", {
+      jobId: id,
+      generatedById: req.user.id,
+      generatedByRole: req.user.role,
+      generatedByName: req.user.userName,
+    });
+
+    res.status(200).json({ message: "Invoice generation triggered" });
   } catch (error) {
     res
       .status(400)

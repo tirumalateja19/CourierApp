@@ -17,6 +17,11 @@ const jobs = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    clientCity: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     scheduledTime: {
       type: String,
       trim: true,
@@ -47,6 +52,10 @@ const jobs = new mongoose.Schema(
     assignedTo: {
       type: String,
     },
+    networkName: {
+      type: String,
+      default: null,
+    },
     packingStatus: {
       type: String,
       enum: {
@@ -63,15 +72,36 @@ const jobs = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    dimensions: {
+    numberOfPackages: {
       type: String,
       trim: true,
+    },
+    dimensionsLength: {
+      type: Number,
+    },
+    dimensionsBreadth: {
+      type: Number,
+    },
+    dimensionsHeight: {
+      type: Number,
     },
     receiverName: {
       type: String,
       trim: true,
     },
     receiverAddress: {
+      type: String,
+      trim: true,
+    },
+    receiverCity: {
+      type: String,
+      trim: true,
+    },
+    receiverZipCode: {
+      type: String,
+      trim: true,
+    },
+    receiverCountry: {
       type: String,
       trim: true,
     },
