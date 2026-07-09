@@ -1,10 +1,10 @@
 import { Router } from "express";
-import userAuth from "../middleware/auth.middleware";
-import isAdmin from "../middleware/isAdmin.middleware";
-import { Job } from "../model/Job.model";
+import userAuth from "../middleware/auth.middleware.js";
+import isAdmin from "../middleware/isAdmin.middleware.js";
+import { Job } from "../model/Job.model.js";
 import mongoose from "mongoose";
-import { Shipment } from "../model/Shipment.model";
-import createAuditLog from "../utils/createAuditLog";
+import { Shipment } from "../model/Shipment.model.js";
+import createAuditLog from "../utils/createAuditLog.js";
 const shipmentRouter = Router();
 
 //shipment
@@ -25,7 +25,17 @@ shipmentRouter.post(
       if (!jobData) {
         return res.status(404).json({ message: "Job not found" });
       }
-
+      if (
+        !jobData.receiverName ||
+        !jobData.receiverAddress ||
+        !jobData.receiverNumber ||
+        !jobData.receiverCity ||
+        !jobData.receiverZipCode
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Please add receiver details before proceeding" });
+      }
       const networkName = (
         jobData.networkName || bodyNetworkName
       )?.toUpperCase();

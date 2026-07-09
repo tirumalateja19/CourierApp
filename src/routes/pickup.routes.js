@@ -7,6 +7,7 @@ import { Job } from "../model/Job.model.js";
 import upload from "../config/multer.js";
 import { JobPhoto } from "../model/JobPhoto.model.js";
 import pdfQueue from "../queues/pdfQueue.js";
+import createAuditLog from "../utils/createAuditLog.js";
 const pickupRouter = Router();
 
 //add details
@@ -29,8 +30,6 @@ pickupRouter.patch(
         packingStatus,
         status,
         price,
-        clientCity,
-        networkName,
         numberOfPackages,
         dimensionsLength,
         dimensionsBreadth,
@@ -49,8 +48,6 @@ pickupRouter.patch(
       if (dimensions !== undefined) updates.dimensions = dimensions;
       if (packingStatus !== undefined) updates.packingStatus = packingStatus;
       if (status !== undefined) updates.status = status;
-      if (clientCity !== undefined) updates.clientCity = clientCity;
-      if (networkName !== undefined) updates.networkName = networkName;
       if (numberOfPackages !== undefined)
         updates.numberOfPackages = numberOfPackages;
       if (dimensionsLength !== undefined)
@@ -241,7 +238,17 @@ pickupRouter.post(
       if (!jobData) {
         return res.status(404).json({ message: "Job not found" });
       }
-
+      if (
+        !jobData.receiverName ||
+        !jobData.receiverAddress ||
+        !jobData.receiverNumber ||
+        !jobData.receiverCity ||
+        !jobData.receiverZipCode
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Please add receiver details before proceeding" });
+      }
       if (!jobData.weight || !jobData.price) {
         return res.status(400).json({
           message:
@@ -278,6 +285,17 @@ pickupRouter.post(
       const jobData = await Job.findById(id);
       if (!jobData) {
         return res.status(404).json({ message: "Job not found" });
+      }
+      if (
+        !jobData.receiverName ||
+        !jobData.receiverAddress ||
+        !jobData.receiverNumber ||
+        !jobData.receiverCity ||
+        !jobData.receiverZipCode
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Please add receiver details before proceeding" });
       }
       await Job.findByIdAndUpdate(id, {
         invoiceStatus: "pending_office_completion",

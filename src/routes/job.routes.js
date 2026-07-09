@@ -19,15 +19,29 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       clientName,
       clientNumber,
       clientAddress,
+      clientCity,
       approxWeight,
       scheduledTime,
       status,
       networkName,
     } = req.body;
+    if (
+      !clientName ||
+      !clientNumber ||
+      !clientAddress ||
+      !clientCity ||
+      !approxWeight ||
+      !scheduledTime ||
+      !status ||
+      !networkName
+    ) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
     const job = new Job({
       clientName: clientName,
       clientNumber: clientNumber,
       clientAddress: clientAddress,
+      clientCity:clientCity,
       approxWeight: approxWeight,
       scheduledTime: scheduledTime,
       status: status,

@@ -36,6 +36,7 @@ const auditLogSchema = new mongoose.Schema(
           "itemsEdited",
           "jobDispatched",
           "partnerDeactivated",
+          "partnerActivated",
         ],
         message: "{VALUE} is not a valid action",
       },

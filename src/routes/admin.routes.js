@@ -153,4 +153,42 @@ adminRouter.patch(
   },
 );
 
+//activate partner
+adminRouter.patch(
+  "/api/admin/partners/:id/activate",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid partner id");
+      }
+
+      const partner = await Partner.findByIdAndUpdate(
+        id,
+        { isDeactivated: false },
+        { returnDocument: "after" },
+      ).select("-password");
+
+      if (!partner) {
+        return res.status(404).json({ message: "Partner not found" });
+      }
+      createAuditLog({
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "partnerActivated",
+        previousStatus: "inactive",
+        newStatus: "active",
+      });
+      res.status(200).json({ message: "Partner activated", partner });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
 export default adminRouter;
