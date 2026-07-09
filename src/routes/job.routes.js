@@ -34,6 +34,12 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       networkName: networkName,
     });
     await job.save();
+    createAuditLog({
+      jobId: job._id,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: "jobCreated",
+    });
     res.status(201).json({ message: "Job created successfully" });
   } catch (err) {
     res.status(400).send(err.message);
@@ -81,6 +87,10 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
         .status(406)
         .json({ message: "Cannot assign, Partner deactivated!" });
     }
+    const existingJob = await Job.findById(id);
+    if (!existingJob) {
+      return res.status(404).json({ message: "Job not found" });
+    }
     const job = await Job.findByIdAndUpdate(
       id,
       {
@@ -92,8 +102,16 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
       { returnDocument: "after" },
     );
     if (!job) {
-      return res.status(400).json({ message: "Job not found" });
+      return res.status(404).json({ message: "Job not found" });
     }
+    createAuditLog({
+      jobId: id,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      action: "jobAssigned",
+      previousStatus: existingJob.status,
+      newStatus: "assigned",
+    });
 
     res.status(200).json({ message: "Job Assigned Successfully", job });
   } catch (error) {
@@ -121,6 +139,11 @@ jobRouter.patch(
         return res.status(400).send("Invalid job");
       }
 
+      const existingJob = await Job.findById(id);
+      if (!existingJob) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
       const job = await Job.findByIdAndUpdate(
         id,
         {
@@ -133,8 +156,16 @@ jobRouter.patch(
       );
 
       if (!job) {
-        return res.status(400).json({ message: "Job not found" });
+        return res.status(404).json({ message: "Job not found" });
       }
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "jobAssigned",
+        previousStatus: existingJob.status,
+        newStatus: "assigned",
+      });
 
       res.status(200).json({ message: "Job Assigned Successfully", job });
     } catch (error) {
@@ -374,52 +405,4 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
   }
 });
 
-//shipment
-jobRouter.post(
-  "/api/jobs/:id/shipment",
-  userAuth,
-  isAdmin,
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { trackingId, networkName: bodyNetworkName } = req.body;
-
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send("Invalid job id");
-      }
-
-      const jobData = await Job.findById(id);
-      if (!jobData) {
-        return res.status(404).json({ message: "Job not found" });
-      }
-
-      const networkName = (
-        jobData.networkName || bodyNetworkName
-      )?.toUpperCase();
-
-      if (!networkName) {
-        return res.status(400).json({ message: "Network name is required" });
-      }
-      if (!trackingId) {
-        return res.status(400).json({ message: "Tracking ID is required" });
-      }
-
-      const shipment = await Shipment.create({
-        jobId: id,
-        networkName,
-        trackingId,
-      });
-
-      await Job.findByIdAndUpdate(id, { status: "dispatched" });
-
-      res
-        .status(201)
-        .json({ message: "Shipment recorded, job dispatched", shipment });
-    } catch (error) {
-      res
-        .status(400)
-        .json({ message: "Something went wrong", error: error.message });
-    }
-  },
-);
 export default jobRouter;

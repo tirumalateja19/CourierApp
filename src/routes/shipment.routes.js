@@ -44,7 +44,14 @@ shipmentRouter.post(
       });
 
       await Job.findByIdAndUpdate(id, { status: "dispatched" });
-      
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "jobDispatched",
+        previousStatus: jobData.status, // whatever status was before this route ran
+        newStatus: "dispatched",
+      });
       res
         .status(201)
         .json({ message: "Shipment recorded, job dispatched", shipment });

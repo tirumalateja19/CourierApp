@@ -7,6 +7,7 @@ import userAuth from "../middleware/auth.middleware.js";
 import validateNewPassword from "../utils/validations.js";
 import mongoose from "mongoose";
 import isAdmin from "../middleware/isAdmin.middleware.js";
+import createAuditLog from "../utils/createAuditLog.js";
 
 const adminRouter = Router();
 
@@ -135,6 +136,13 @@ adminRouter.patch(
       if (!partner) {
         return res.status(404).send("Partner not found");
       }
+      createAuditLog({
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "partnerDeactivated",
+        previousStatus: "active",
+        newStatus: "inactive",
+      });
 
       res.status(200).json({ message: "Partner deactivated", partner });
     } catch (err) {

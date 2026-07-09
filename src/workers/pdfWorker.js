@@ -10,6 +10,7 @@ import { PodSlip } from "../model/PodSlip.model.js";
 import { Job } from "../model/Job.model.js";
 import { JobItem } from "../model/JobItem.model.js";
 import { JobPhoto } from "../model/JobPhoto.model.js";
+import createAuditLog from "../utils/createAuditLog.js";
 
 const uploadPdfToCloudinary = (buffer, folder) => {
   return new Promise((resolve, reject) => {
@@ -89,6 +90,12 @@ const pdfWorker = new Worker(
         generatedByRole,
         price: jobData.price,
         pdfUrl: uploadResult.secure_url,
+      });
+
+      createAuditLog({
+        jobId,
+        actorRole: "system",
+        action: "pdfGenerated",
       });
 
       console.log(`Invoice generated for job ${jobId}`);
@@ -176,6 +183,12 @@ const pdfWorker = new Worker(
         generatedById,
         pdfUrl: uploadResult.secure_url,
         pdfHash,
+      });
+
+      createAuditLog({
+        jobId,
+        actorRole: "system",
+        action: "pdfGenerated",
       });
 
       console.log(`Pod slip generated for job ${jobId}`);

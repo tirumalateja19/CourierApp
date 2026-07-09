@@ -102,7 +102,12 @@ pickupRouter.post(
         quantity,
         fragile,
       });
-
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "itemsEdited",
+      });
       res.status(201).json({ message: "Item added", item });
     } catch (error) {
       res
@@ -130,6 +135,12 @@ pickupRouter.patch(
       if (!updatedItem) {
         return res.status(404).json({ message: "Item not found for this job" });
       }
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "itemsEdited",
+      });
       res.status(200).json({ message: "Item edited", updatedItem });
     } catch (error) {
       res
@@ -161,6 +172,12 @@ pickupRouter.delete(
       if (!deletedItem) {
         return res.status(404).json({ message: "Item not found for this job" });
       }
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        action: "itemsEdited",
+      });
       res.status(200).json({ message: "Item deleted successfully" });
     } catch (error) {
       res

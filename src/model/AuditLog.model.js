@@ -1,22 +1,23 @@
 import mongoose from "mongoose";
-const auditLog = new mongoose.Schema(
+
+const auditLogSchema = new mongoose.Schema(
   {
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      required: false,
       immutable: true,
     },
     actorId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      required: false,
       immutable: true,
     },
     actorRole: {
       type: String,
       enum: {
-        values: ["admin", "partner"],
+        values: ["admin", "partner", "system"],
+        message: "{VALUE} is not a valid role",
       },
-      message: "{VALUE} is not a valid role",
       required: true,
       immutable: true,
     },
@@ -24,16 +25,17 @@ const auditLog = new mongoose.Schema(
       type: String,
       enum: {
         values: [
-          "job created",
-          "job assigned",
-          "status updated",
-          "pod generated",
-          "job auto locked",
-          "job unlocked",
-          "items edited",
-          "pdf regenerated",
-          "job locked",
-          "job dispatched",
+          "jobCreated",
+          "jobAssigned",
+          "statusUpdated",
+          "pdfGenerated",
+          "pdfRegenerated",
+          "jobAutoLocked",
+          "jobLocked",
+          "jobUnlocked",
+          "itemsEdited",
+          "jobDispatched",
+          "partnerDeactivated",
         ],
         message: "{VALUE} is not a valid action",
       },
@@ -49,8 +51,8 @@ const auditLog = new mongoose.Schema(
       immutable: true,
     },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
-export const AuditLog = mongoose.model("AuditLog", auditLog);
+
+const AuditLog = mongoose.model("AuditLog", auditLogSchema);
+export default AuditLog;
