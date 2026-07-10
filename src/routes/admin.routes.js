@@ -39,7 +39,10 @@ adminRouter.post("/api/admin/login", async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, // 1 day in ms
     });
 
-    res.status(200).send("Login successful");
+    res.status(200).json({
+      message: "Login successful",
+      user: { id: user._id, userName: user.userName, role: "admin" },
+    });
   } catch (err) {
     res.status(401).send(err.message);
   }

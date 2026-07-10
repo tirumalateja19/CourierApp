@@ -29,4 +29,9 @@ authRouter.post("/api/auth/logout", userAuth, (req, res) => {
   res.send("Logout successful");
 });
 
+//current-user
+authRouter.get("/api/auth/me", userAuth, (req, res) => {
+  res.status(200).json({ user: req.user });
+});
+
 export default authRouter;
