@@ -22,6 +22,7 @@ const partnerSchema = new mongoose.Schema(
       type: String,
       trim: true,
       required: true,
+      unique: true,
       maxLength: 10,
     },
     availableStatus: {

@@ -44,7 +44,7 @@ adminRouter.post("/api/admin/login", async (req, res) => {
       user: { id: user._id, userName: user.userName, role: "admin" },
     });
   } catch (err) {
-    res.status(401).send(err.message);
+    res.status(401).json({ message: err.message });
   }
 });
 
@@ -70,9 +70,9 @@ adminRouter.post(
         availableStatus: availableStatus,
       });
       await partner.save();
-      res.status(201).send("Partner created");
+      res.status(201).json({ message: "Partner Created", partner });
     } catch (err) {
-      res.status(400).send(err.message);
+      res.status(400).json({ message: err.message });
     }
   },
 );
@@ -100,10 +100,7 @@ adminRouter.post(
       await admin.save();
       res.status(201).send("Admin created");
     } catch (err) {
-      if (err.code === 11000) {
-        return res.status(409).send("Username already exists");
-      }
-      res.status(400).send(err.message);
+      res.status(400).json({ message: err.message });
     }
   },
 );
@@ -112,9 +109,9 @@ adminRouter.post(
 adminRouter.get("/api/admin/partners", userAuth, isAdmin, async (req, res) => {
   try {
     const partners = await Partner.find({}).select("-password");
-    res.status(200).json(partners);
+    res.status(200).json({ message: "Fetched Successfully", partners });
   } catch (err) {
-    res.status(500).send("Something went wrong");
+    res.status(500).json({ message: "Something went wrong" });
   }
 });
 
