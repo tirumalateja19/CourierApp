@@ -18,7 +18,7 @@ adminRouter.post("/api/admin/login", async (req, res) => {
 
     const user = await Admin.findOne({ userName: userName });
     if (!user) {
-      throw new Error("Incorrect UserName or Password");
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -72,6 +72,11 @@ adminRouter.post(
       await partner.save();
       res.status(201).json({ message: "Partner Created", partner });
     } catch (err) {
+      if (err.code === 11000) {
+        return res
+          .status(409)
+          .json({ message: "Username/Contact already exists" });
+      }
       res.status(400).json({ message: err.message });
     }
   },

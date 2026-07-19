@@ -18,7 +18,7 @@ const uploadPdfToCloudinary = (buffer, folder) => {
       {
         resource_type: "raw",
         folder,
-        public_id: `invoice_${Date.now()}.pdf`, // extension baked into the name itself
+        public_id: `invoice_${Date.now()}.pdf`,
       },
       (error, result) => {
         if (error) return reject(error);

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import userAuth from "../middleware/auth.middleware.js";
 import Admin from "../model/Admin.model.js";
+import Partner from "../model/Partner.model.js";
 import validateNewPassword from "../utils/validations.js";
 import bcrypt from "bcrypt";
 const authRouter = Router();
@@ -8,14 +9,29 @@ const authRouter = Router();
 //password change
 authRouter.patch("/api/auth/change-password", userAuth, async (req, res) => {
   try {
+    const { oldPassword, password } = req.body;
+    if (!oldPassword || !password) {
+      return res
+        .status(400)
+        .json({ message: "Old and new password are required" });
+    }
+    const Model = req.user.role === "admin" ? Admin : Partner;
+    const user = await Model.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      return res.status(401).json({ message: "Old password is incorrect" });
+    }
     validateNewPassword(req);
-    const loggedInUser = req.admin;
-    const { password } = req.body;
-    const passwordHash = await bcrypt.hash(password, 10);
-    await Admin.findByIdAndUpdate(loggedInUser.id, { password: passwordHash });
-    res.send("Update Successfull");
-  } catch (err) {
-    res.status(400).send(err.message);
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
   }
 });
 

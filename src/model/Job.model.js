@@ -39,8 +39,7 @@ const jobs = new mongoose.Schema(
         ],
         message: "{VALUE} is incorrect status",
       },
-      required: true,
-      deafult: "created",
+      default: "created",
       trim: true,
     },
     assignedToId: {

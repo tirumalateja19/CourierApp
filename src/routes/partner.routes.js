@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import { Job } from "../model/Job.model.js";
 import userAuth from "../middleware/auth.middleware.js";
 import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
+import { JobItem } from "../model/JobItem.model.js";
 
 const partnerRouter = Router();
 
@@ -15,10 +16,10 @@ partnerRouter.post("/api/partner/login", async (req, res) => {
     const { userName, password } = req.body;
     const user = await Partner.findOne({ userName: userName });
     if (!user) {
-      throw new Error("Incorrect UserName or Password");
+      return res.status(401).json({ message: "Invalid credentials" });
     }
     if (user.isDeactivated) {
-      throw new Error("Cannot access the account, contact admin");
+      return res.status(403).json({ message: "Access denied" });
     }
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -68,20 +69,28 @@ partnerRouter.get("/api/partner/jobs", userAuth, async (req, res) => {
 });
 
 //get specific job
-partnerRouter.get("/api/partner/jobs/:id", userAuth,verifyPartnerAccess, async (req, res) => {
-  try {
-    const { id } = req.params; //job id
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).send("Invalid");
+partnerRouter.get(
+  "/api/partner/jobs/:id",
+  userAuth,
+  verifyPartnerAccess,
+  async (req, res) => {
+    try {
+      const { id } = req.params; //job id
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid");
+      }
+      const jobData = await Job.findById(id);
+      if (!jobData) {
+        res.status(404).json({ message: "Job not found" });
+      }
+      const items = await JobItem.find({ jobId: id });
+      res
+        .status(200)
+        .json({ message: "Job Fetch Successfull", jobData, items });
+    } catch (error) {
+      res.status(400).json({ error: err.message });
     }
-    const data = await Job.findById(id);
-    if (!data) {
-      res.status(404).json({ message: "Job not found" });
-    }
-    res.status(200).json({ message: "Found Job", data });
-  } catch (error) {
-    res.status(400).json({ error: err.message });
-  }
-});
+  },
+);
 
 export default partnerRouter;

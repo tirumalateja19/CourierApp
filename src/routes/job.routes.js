@@ -22,7 +22,6 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       clientCity,
       approxWeight,
       scheduledTime,
-      status,
       networkName,
     } = req.body;
     if (
@@ -32,7 +31,6 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       !clientCity ||
       !approxWeight ||
       !scheduledTime ||
-      !status ||
       !networkName
     ) {
       return res.status(400).json({ message: "All fields are required" });
@@ -41,10 +39,9 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       clientName: clientName,
       clientNumber: clientNumber,
       clientAddress: clientAddress,
-      clientCity:clientCity,
+      clientCity: clientCity,
       approxWeight: approxWeight,
       scheduledTime: scheduledTime,
-      status: status,
       networkName: networkName,
     });
     await job.save();
@@ -105,7 +102,7 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
     if (!existingJob) {
       return res.status(404).json({ message: "Job not found" });
     }
-    const job = await Job.findByIdAndUpdate(
+    const jobData = await Job.findByIdAndUpdate(
       id,
       {
         assignedToId: partnerId,
@@ -115,7 +112,7 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
       },
       { returnDocument: "after" },
     );
-    if (!job) {
+    if (!jobData) {
       return res.status(404).json({ message: "Job not found" });
     }
     createAuditLog({
@@ -127,7 +124,7 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
       newStatus: "assigned",
     });
 
-    res.status(200).json({ message: "Job Assigned Successfully", job });
+    res.status(200).json({ message: "Job Assigned Successfully", jobData });
   } catch (error) {
     res
       .status(400)
@@ -158,7 +155,7 @@ jobRouter.patch(
         return res.status(404).json({ message: "Job not found" });
       }
 
-      const job = await Job.findByIdAndUpdate(
+      const jobData = await Job.findByIdAndUpdate(
         id,
         {
           assignedToId: adminId,
@@ -169,7 +166,7 @@ jobRouter.patch(
         { returnDocument: "after" },
       );
 
-      if (!job) {
+      if (!jobData) {
         return res.status(404).json({ message: "Job not found" });
       }
       createAuditLog({
@@ -181,7 +178,7 @@ jobRouter.patch(
         newStatus: "assigned",
       });
 
-      res.status(200).json({ message: "Job Assigned Successfully", job });
+      res.status(200).json({ message: "Job Assigned Successfully", jobData });
     } catch (error) {
       res
         .status(400)
@@ -222,13 +219,13 @@ jobRouter.patch("/api/jobs/:id/status", userAuth, isAdmin, async (req, res) => {
     const updateJob = await Job.findByIdAndUpdate(
       id,
       { status: status },
-      { returnDocument: "after" },
+      { runValidators: true,returnDocument: "after" },
     );
     if (!updateJob) {
       return res.status(400).json({ message: "Job not found" });
     }
 
-    res.status(200).json({ message: "Job Assigned Successfully", updateJob });
+    res.status(200).json({ message: "Status Updated", jobData: updateJob });
   } catch (error) {
     res
       .status(400)
@@ -267,7 +264,9 @@ jobRouter.patch("/api/jobs/:id/lock", userAuth, isAdmin, async (req, res) => {
       previousStatus: undefined, // or "unlocked" if you decide to track it as a pseudo-status
       newStatus: undefined, // same
     });
-    res.status(200).json({ message: "Job locked successfully", lockedJob });
+    res
+      .status(200)
+      .json({ message: "Job locked successfully", jobData: lockedJob });
   } catch (error) {
     res
       .status(400)
@@ -306,7 +305,9 @@ jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
       actorRole: req.user.role,
       action: "jobUnlocked",
     });
-    res.status(200).json({ message: "Job unLocked successfully", unLockedJob });
+    res
+      .status(200)
+      .json({ message: "Job unLocked successfully", jobData: unLockedJob });
   } catch (error) {
     res
       .status(400)

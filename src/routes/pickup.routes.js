@@ -262,7 +262,10 @@ pickupRouter.post(
         generatedByRole: req.user.role,
         generatedByName: req.user.userName,
       });
-      await pdfQueue.add("generate-pod-slip", { jobId: id });
+      await pdfQueue.add("generate-pod-slip", {
+        jobId: id,
+        generatedById: req.user.id,
+      });
 
       res.status(200).json({ message: "Job submitted, PDFs generating" });
     } catch (error) {
