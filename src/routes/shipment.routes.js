@@ -53,13 +53,16 @@ shipmentRouter.post(
         trackingId,
       });
 
-      await Job.findByIdAndUpdate(id, { status: "dispatched" });
+      await Job.findByIdAndUpdate(id, {
+        status: "Dispatched",
+        dispatchedAt: new Date(),
+      });
       createAuditLog({
         jobId: id,
         actorId: req.user.id,
         actorRole: req.user.role,
         action: "jobDispatched",
-        previousStatus: jobData.status, // whatever status was before this route ran
+        previousStatus: jobData.status,
         newStatus: "dispatched",
       });
       res

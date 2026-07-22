@@ -29,17 +29,10 @@ const jobs = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: [
-          "created",
-          "assigned",
-          "en_route",
-          "picked_up",
-          "at_office",
-          "dispatched",
-        ],
+        values: ["Created", "Assigned", "PickedUp", "AtOffice", "Dispatched"],
         message: "{VALUE} is incorrect status",
       },
-      default: "created",
+      default: "Created",
       trim: true,
     },
     assignedToId: {
@@ -113,6 +106,10 @@ const jobs = new mongoose.Schema(
       type: String,
       trim: true,
       maxLength: 6,
+    },
+    dispatchedAt: {
+      type: String,
+      trim: true,
     },
     invoiceStatus: {
       type: String,

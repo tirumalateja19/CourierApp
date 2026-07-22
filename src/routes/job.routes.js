@@ -21,7 +21,6 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       clientAddress,
       clientCity,
       approxWeight,
-      scheduledTime,
       networkName,
     } = req.body;
     if (
@@ -30,7 +29,6 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       !clientAddress ||
       !clientCity ||
       !approxWeight ||
-      !scheduledTime ||
       !networkName
     ) {
       return res.status(400).json({ message: "All fields are required" });
@@ -41,7 +39,7 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       clientAddress: clientAddress,
       clientCity: clientCity,
       approxWeight: approxWeight,
-      scheduledTime: scheduledTime,
+      scheduledTime: new Date(),
       networkName: networkName,
     });
     await job.save();
@@ -108,7 +106,7 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
         assignedToId: partnerId,
         assignedToRole: "partner",
         assignedTo: partnerData.userName,
-        status: "assigned",
+        status: "Assigned",
       },
       { returnDocument: "after" },
     );
@@ -161,7 +159,7 @@ jobRouter.patch(
           assignedToId: adminId,
           assignedToRole: "admin",
           assignedTo: adminName,
-          status: "assigned",
+          status: "Assigned",
         },
         { returnDocument: "after" },
       );
