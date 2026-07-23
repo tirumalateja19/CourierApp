@@ -12,6 +12,11 @@ const auditLogSchema = new mongoose.Schema(
       required: false,
       immutable: true,
     },
+    actorName: {
+      type: String,
+      required: false,
+      immutable: true,
+    },
     actorRole: {
       type: String,
       enum: {

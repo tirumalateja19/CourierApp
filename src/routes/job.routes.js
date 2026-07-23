@@ -47,6 +47,7 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       jobId: job._id,
       actorId: req.user.id,
       actorRole: req.user.role,
+      actorName: req.user.userName,
       action: "jobCreated",
     });
     res.status(201).json({ message: "Job created successfully" });
@@ -58,11 +59,12 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
 //all jobs
 jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
   try {
-    const { status, assignedToId, fromDate, toDate } = req.query;
+    const { status, assignedToId, fromDate, toDate, clientName } = req.query;
 
     const filter = {};
     if (status) filter.status = status;
     if (assignedToId) filter.assignedToId = assignedToId;
+    if (clientName) filter.clientName = { $regex: clientName, $options: "i" };
     if (fromDate || toDate) {
       filter.createdAt = {};
       if (fromDate) filter.createdAt.$gte = new Date(fromDate);
@@ -117,6 +119,7 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
       jobId: id,
       actorId: req.user.id,
       actorRole: req.user.role,
+      actorName: req.user.userName,
       action: "jobAssigned",
       previousStatus: existingJob.status,
       newStatus: "assigned",
@@ -171,6 +174,7 @@ jobRouter.patch(
         jobId: id,
         actorId: req.user.id,
         actorRole: req.user.role,
+        actorName: req.user.userName,
         action: "jobAssigned",
         previousStatus: existingJob.status,
         newStatus: "assigned",
@@ -258,6 +262,7 @@ jobRouter.patch("/api/jobs/:id/lock", userAuth, isAdmin, async (req, res) => {
       jobId: id,
       actorId: req.user.id,
       actorRole: req.user.role,
+      actorName: req.user.userName,
       action: "jobLocked",
       previousStatus: undefined, // or "unlocked" if you decide to track it as a pseudo-status
       newStatus: undefined, // same
@@ -301,6 +306,7 @@ jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
       jobId: id,
       actorId: req.user.id,
       actorRole: req.user.role,
+      actorName: req.user.userName,
       action: "jobUnlocked",
     });
     res

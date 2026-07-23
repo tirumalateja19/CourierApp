@@ -8,6 +8,8 @@ import validateNewPassword from "../utils/validations.js";
 import mongoose from "mongoose";
 import isAdmin from "../middleware/isAdmin.middleware.js";
 import createAuditLog from "../utils/createAuditLog.js";
+import AuditLog from "../model/AuditLog.model.js";
+import { Job } from "../model/Job.model.js";
 
 const adminRouter = Router();
 
@@ -144,6 +146,7 @@ adminRouter.patch(
       createAuditLog({
         actorId: req.user.id,
         actorRole: req.user.role,
+        actorName:req.user.userName,
         action: "partnerDeactivated",
         previousStatus: "active",
         newStatus: "inactive",
@@ -183,11 +186,41 @@ adminRouter.patch(
       createAuditLog({
         actorId: req.user.id,
         actorRole: req.user.role,
+        actorName: req.user.userName,
         action: "partnerActivated",
         previousStatus: "inactive",
         newStatus: "active",
       });
       res.status(200).json({ message: "Partner activated", partner });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
+//get history
+adminRouter.get(
+  "/api/admin/audit-logs/:jobId",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { jobId } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(jobId)) {
+        return res.status(400).json({ message: "Invalid job id" });
+      }
+
+      const jobExists = await Job.findById(jobId);
+      if (!jobExists) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      const logs = await AuditLog.find({ jobId }).sort({ createdAt: 1 });
+
+      res.status(200).json({ message: "Fetched audit logs", logs });
     } catch (error) {
       res
         .status(400)

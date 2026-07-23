@@ -61,6 +61,7 @@ shipmentRouter.post(
         jobId: id,
         actorId: req.user.id,
         actorRole: req.user.role,
+        actorName: req.user.userName,
         action: "jobDispatched",
         previousStatus: jobData.status,
         newStatus: "dispatched",

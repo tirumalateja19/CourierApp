@@ -103,6 +103,7 @@ pickupRouter.post(
         jobId: id,
         actorId: req.user.id,
         actorRole: req.user.role,
+        actorName: req.user.userName,
         action: "itemsEdited",
       });
       res.status(201).json({ message: "Item added", item });
@@ -136,6 +137,7 @@ pickupRouter.patch(
         jobId: id,
         actorId: req.user.id,
         actorRole: req.user.role,
+        actorName: req.user.userName,
         action: "itemsEdited",
       });
       res.status(200).json({ message: "Item edited", updatedItem });
@@ -173,6 +175,7 @@ pickupRouter.delete(
         jobId: id,
         actorId: req.user.id,
         actorRole: req.user.role,
+        actorName: req.user.userName,
         action: "itemsEdited",
       });
       res.status(200).json({ message: "Item deleted successfully" });
