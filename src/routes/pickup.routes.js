@@ -17,7 +17,7 @@ pickupRouter.patch(
   verifyPartnerAccess,
   async (req, res) => {
     try {
-      const { id } = req.params; //job id
+      const { id } = req.params;
       if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(400).send("Invalid");
       }
@@ -25,37 +25,27 @@ pickupRouter.patch(
         receiverName,
         receiverNumber,
         receiverAddress,
-        weight,
-        dimensions,
+        packages,
         packingStatus,
         status,
         price,
         numberOfPackages,
-        dimensionsLength,
-        dimensionsBreadth,
-        dimensionsHeight,
         receiverCity,
         receiverZipCode,
         receiverCountry,
       } = req.body;
+
       const updates = {};
       if (receiverName !== undefined) updates.receiverName = receiverName;
       if (receiverNumber !== undefined) updates.receiverNumber = receiverNumber;
       if (receiverAddress !== undefined)
         updates.receiverAddress = receiverAddress;
-      if (weight !== undefined) updates.weight = weight;
+      if (packages !== undefined) updates.packages = packages;
       if (price !== undefined) updates.price = price;
-      if (dimensions !== undefined) updates.dimensions = dimensions;
       if (packingStatus !== undefined) updates.packingStatus = packingStatus;
       if (status !== undefined) updates.status = status;
       if (numberOfPackages !== undefined)
         updates.numberOfPackages = numberOfPackages;
-      if (dimensionsLength !== undefined)
-        updates.dimensionsLength = dimensionsLength;
-      if (dimensionsBreadth !== undefined)
-        updates.dimensionsBreadth = dimensionsBreadth;
-      if (dimensionsHeight !== undefined)
-        updates.dimensionsHeight = dimensionsHeight;
       if (receiverCity !== undefined) updates.receiverCity = receiverCity;
       if (receiverZipCode !== undefined)
         updates.receiverZipCode = receiverZipCode;
@@ -258,7 +248,10 @@ pickupRouter.post(
             "Weight and price are required to submit. Use defer-invoice if unavailable.",
         });
       }
-      await Job.findByIdAndUpdate(id, { invoiceStatus: "generated_at_pickup" });
+      await Job.findByIdAndUpdate(id, {
+        invoiceStatus: "generated_at_pickup",
+        status: "PickedUp",
+      });
       await pdfQueue.add("generate-invoice", {
         jobId: id,
         generatedById: req.user.id,
@@ -305,6 +298,7 @@ pickupRouter.post(
       }
       await Job.findByIdAndUpdate(id, {
         invoiceStatus: "pending_office_completion",
+        status: AtOffice,
       });
       await pdfQueue.add("generate-pod-slip", {
         jobId: id,

@@ -60,22 +60,17 @@ const jobs = new mongoose.Schema(
       trim: true,
       required: true,
     },
-    weight: {
-      type: String,
-      trim: true,
-    },
+    packages: [
+      {
+        weight: Number,
+        length: Number,
+        breadth: Number,
+        height: Number,
+      },
+    ],
     numberOfPackages: {
       type: String,
       trim: true,
-    },
-    dimensionsLength: {
-      type: Number,
-    },
-    dimensionsBreadth: {
-      type: Number,
-    },
-    dimensionsHeight: {
-      type: Number,
     },
     receiverName: {
       type: String,
