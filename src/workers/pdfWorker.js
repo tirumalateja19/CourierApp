@@ -28,6 +28,28 @@ const uploadPdfToCloudinary = (buffer, folder) => {
     stream.end(buffer);
   });
 };
+const buildPackagesRows = (packages) => {
+  let totalWeight = 0;
+  let totalVolWeight = 0;
+
+  const rows = packages
+    .map((pkg, index) => {
+      const volWeight = (pkg.length * pkg.breadth * pkg.height) / 5000;
+      totalWeight += pkg.weight;
+      totalVolWeight += volWeight;
+      return `
+    <tr>
+      <td>Package ${index + 1}</td>
+      <td>${pkg.weight}</td>
+      <td>${pkg.length} x ${pkg.breadth} x ${pkg.height}</td>
+      <td>${volWeight.toFixed(2)}</td>
+    </tr>
+  `;
+    })
+    .join("");
+
+  return { rows, totalWeight, totalVolWeight: totalVolWeight.toFixed(2) };
+};
 
 const pdfWorker = new Worker(
   "pdf-generation",
@@ -39,12 +61,11 @@ const pdfWorker = new Worker(
       const jobData = await Job.findById(jobId);
       if (!jobData) throw new Error("Job not found");
 
-      const volWeight = (
-        (jobData.dimensionsLength *
-          jobData.dimensionsBreadth *
-          jobData.dimensionsHeight) /
-        5000
-      ).toFixed(2);
+      const {
+        rows: packagesRows,
+        totalWeight,
+        totalVolWeight,
+      } = buildPackagesRows(jobData.packages);
 
       const html = renderTemplate(
         path.resolve("uploads/templates/invoice_template.html"),
@@ -61,10 +82,10 @@ const pdfWorker = new Worker(
           receiverCity: jobData.receiverCity,
           zipCode: jobData.receiverZipCode,
           referenceNo: jobId,
-          dimensions: `${jobData.dimensionsLength} x ${jobData.dimensionsBreadth} x ${jobData.dimensionsHeight}`,
-          volWeight,
+          packagesRows,
+          totalWeight,
+          totalVolWeight,
           packages: jobData.numberOfPackages,
-          weight: jobData.weight,
           guidelines:
             "Please handle with care. Do not bend or crush the package.",
           total: jobData.price,
@@ -108,6 +129,11 @@ const pdfWorker = new Worker(
       if (!jobData) throw new Error("Job not found");
 
       const items = await JobItem.find({ jobId });
+      const {
+        rows: packagesRows,
+        totalWeight,
+        totalVolWeight,
+      } = buildPackagesRows(jobData.packages);
       const itemRows = items
         .map(
           (item) => `
@@ -132,12 +158,7 @@ const pdfWorker = new Worker(
         )
         .join("");
 
-      const volWeight = (
-        (jobData.dimensionsLength *
-          jobData.dimensionsBreadth *
-          jobData.dimensionsHeight) /
-        5000
-      ).toFixed(2);
+        
 
       const html = renderTemplate(
         path.resolve("uploads/templates/podslip_template.html"),
@@ -153,9 +174,9 @@ const pdfWorker = new Worker(
           receiverZipCode: jobData.receiverZipCode,
           receiverNumber: jobData.receiverNumber,
           itemRows,
-          weight: jobData.weight,
-          dimensions: `${jobData.dimensionsLength} x ${jobData.dimensionsBreadth} x ${jobData.dimensionsHeight}`,
-          volWeight,
+          packagesRows,
+          totalWeight,
+          totalVolWeight,
           numberOfPackages: jobData.numberOfPackages,
           photoPages,
         },

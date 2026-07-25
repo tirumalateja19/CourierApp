@@ -4,96 +4,218 @@
 <head>
     <meta charset="UTF-8">
     <title>International Airway Bill</title>
+    <style>
+        /* Base reset and styling */
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #ececec;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+            background: #fff;
+            border: 2px solid #1d3f8b;
+            box-sizing: border-box;
+        }
+
+        /* Table structural rules */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        td {
+            border: 1px solid #1d3f8b;
+            padding: 8px;
+            vertical-align: top;
+            word-wrap: break-word;
+            /* Prevents long strings from breaking layout */
+        }
+
+        /* Utility classes */
+        .bg-blue {
+            background-color: #1d3f8b !important;
+            color: #fff !important;
+            text-align: center;
+        }
+
+        .valign-middle {
+            vertical-align: middle;
+        }
+
+        .section-min-height {
+            min-height: 120px;
+        }
+
+        .text-lg {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .text-sm {
+            font-size: 13px;
+        }
+
+        .text-xl {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1d3f8b;
+        }
+
+        /* Inner table spacing fixes */
+        table.inner-table {
+            table-layout: auto;
+        }
+
+        table.inner-table td {
+            border: 1px solid #1d3f8b;
+            padding: 6px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        /* --- PDF & Print Specific Fixes --- */
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+                /* Removes outer gray space on the PDF page */
+            }
+
+            .container {
+                max-width: 100%;
+                border: 2px solid #1d3f8b;
+                margin: 0;
+            }
+
+            /* Forces the PDF generator to keep the blue backgrounds */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+    </style>
 </head>
 
-<body style="margin:0;padding:20px;background:#ececec;font-family:Arial,Helvetica,sans-serif;">
-    <div style="width:800px;margin:auto;background:#fff;border:2px solid #1d3f8b;">
-        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-
+<body>
+    <div class="container">
+        <table>
+            <!-- Header Row -->
             <tr>
-                <td
-                    style="width:50%;background:#1d3f8b;color:#fff;border:1px solid #1d3f8b;padding:12px;text-align:center;">
-                    <div style="font-size:22px;font-weight:bold;">INTERNATIONAL COURIER SERVICES</div>
-                    <div style="margin-top:8px;font-size:13px;">
-                        <b>CELL:</b> {{cell}} &nbsp;&nbsp;|&nbsp;&nbsp;
-                        <b>EMAIL:</b> {{email}}
+                <td class="bg-blue valign-middle" style="width:50%; padding:12px;">
+                    <div class="text-lg">INTERNATIONAL COURIER SERVICES</div>
+                    <div class="text-sm" style="margin-top:8px;">
+                        <b>CELL:</b> {{cell}} &nbsp;&nbsp;|&nbsp;&nbsp; <b>EMAIL:</b> {{email}}
                     </div>
                 </td>
-                <td
-                    style="width:50%;background:#1d3f8b;color:#fff;border:1px solid #1d3f8b;text-align:center;font-size:22px;font-weight:bold;">
+                <td class="bg-blue valign-middle text-lg" style="width:50%;">
                     INTERNATIONAL AIRWAY BILL
                 </td>
             </tr>
 
+            <!-- Reference & Consignee Row -->
             <tr>
-                <td style="border:1px solid #1d3f8b;padding:8px;height:65px;vertical-align:top;">
+                <td>
                     <b>Consignee:</b><br>
                     {{senderName}}
                 </td>
-                <td style="border:1px solid #1d3f8b;padding:8px;height:65px;vertical-align:top;">
+                <td>
                     <b>Reference No:</b> {{referenceNo}}<br><br>
                     <b>Consignee:</b><br>
                     {{receiverName}}
                 </td>
             </tr>
 
+            <!-- Address Row -->
             <tr>
-                <td style="border:1px solid #1d3f8b;padding:8px;height:145px;vertical-align:top;">
-                    <div style="padding-bottom:6px;border-bottom:1px solid #1d3f8b;">
+                <td>
+                    <div style="padding-bottom:6px; border-bottom:1px solid #1d3f8b;">
                         <b>Tel No:</b> {{senderPhone}}
                     </div>
-                    <div style="padding-top:6px;">
+                    <div class="section-min-height" style="padding-top:6px;">
                         <b>Address:</b><br>
-                        {{senderAddress}}<br><br>
+                        {{senderAddress}}
                     </div>
                 </td>
-
-                <td style="border:1px solid #1d3f8b;padding:8px;height:145px;vertical-align:top;">
-                    <div style="padding-bottom:6px;border-bottom:1px solid #1d3f8b;">
+                <td>
+                    <div style="padding-bottom:6px; border-bottom:1px solid #1d3f8b;">
                         <b>Tel No:</b> {{receiverPhone}}
                     </div>
-                    <div style="padding-top:6px;">
+                    <div class="section-min-height" style="padding-top:6px;">
                         <b>Address:</b><br>
-                        {{receiverAddress}}<br><br>
+                        {{receiverAddress}}
                     </div>
                 </td>
             </tr>
 
+            <!-- City & Zip Row -->
             <tr>
-                <td style="border:1px solid #1d3f8b;padding:8px;"><b>City:</b> {{senderCity}}</td>
-                <td style="border:1px solid #1d3f8b;padding:0;">
-                    <table style="width:100%;border-collapse:collapse;">
+                <td><b>City:</b> {{senderCity}}</td>
+                <td style="padding:0;">
+                    <!-- Using a proper inner table instead of floating elements -->
+                    <table style="width:100%; border-collapse:collapse; height:100%;">
                         <tr>
-                            <td style="border-right:1px solid #1d3f8b;padding:8px;"><b>City:</b> {{receiverCity}}</td>
-                            <td style="padding:8px;"><b>Zip:</b> {{zipCode}}</td>
+                            <td style="border:none; border-right:1px solid #1d3f8b; width:50%;">
+                                <b>City:</b> {{receiverCity}}
+                            </td>
+                            <td style="border:none; width:50%;">
+                                <b>Zip:</b> {{zipCode}}
+                            </td>
                         </tr>
                     </table>
                 </td>
             </tr>
 
+            <!-- Packages Table Row -->
             <tr>
-                <td style="border:1px solid #1d3f8b;padding:8px;"><b>Dimensions:</b> {{dimensions}}<br><b>Vol
-                        Weight:</b> {{volWeight}}</td>
-                <td style="border:1px solid #1d3f8b;padding:8px;"><b>Packages:</b> {{packages}}<br><b>Weight:</b>
-                    {{weight}}</td>
+                <td colspan="2" style="padding:0;">
+                    <div style="padding:8px 8px 4px;"><b>Packages:</b> {{packages}}</div>
+                    <table class="inner-table" style="width:100%; border-collapse:collapse;">
+                        <tr class="bg-blue" style="font-size:12px;">
+                            <td style="border:1px solid #1d3f8b; text-align:center;">#</td>
+                            <td style="border:1px solid #1d3f8b; text-align:center;">Weight</td>
+                            <td style="border:1px solid #1d3f8b; text-align:center;">Dimensions (L x B x H)</td>
+                            <td style="border:1px solid #1d3f8b; text-align:center;">Vol. Weight</td>
+                        </tr>
+                        {{packagesRows}}
+                        <tr style="font-weight:bold; font-size:13px;">
+                            <td style="border:1px solid #1d3f8b; text-align:center;">Total</td>
+                            <td style="border:1px solid #1d3f8b; text-align:center;">{{totalWeight}}</td>
+                            <td style="border:1px solid #1d3f8b;"></td>
+                            <td style="border:1px solid #1d3f8b; text-align:center;">{{totalVolWeight}}</td>
+                        </tr>
+                    </table>
+                </td>
             </tr>
 
+            <!-- Guidelines & Total Row -->
             <tr>
-                <td style="border:1px solid #1d3f8b;padding:8px;height:70px;vertical-align:top;">
-                    <b>Guidelines</b><br>{{guidelines}}
+                <td>
+                    <b>Guidelines</b><br>
+                    {{guidelines}}
                 </td>
-                <td
-                    style="border:1px solid #1d3f8b;padding:8px;font-size:24px;font-weight:bold;color:#1d3f8b;vertical-align:top;">
+                <td class="text-xl">
                     Total: {{total}}
                 </td>
             </tr>
 
+            <!-- Footer Row -->
             <tr>
-                <td style="border:1px solid #1d3f8b;padding:8px;">
-                    <b>Pick Up Name:</b> {{pickupName}}
-                    <span style="float:right;"><b>ID:</b> {{pickupId}}</span>
+                <td style="padding:0;">
+                    <!-- Replaced problematic float:right with a reliable flex/table structure -->
+                    <table class="inner-table" style="width:100%; padding:8px;">
+                        <tr>
+                            <td style="text-align:left; border:none;"><b>Pick Up Name:</b> {{pickupName}}</td>
+                            <td style="text-align:right; border:none;"><b>ID:</b> {{pickupId}}</td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="border:1px solid #1d3f8b;background:#1d3f8b;color:#fff;text-align:center;font-weight:bold;">
+                <td class="bg-blue valign-middle" style="font-weight:bold;">
                     NON NEGOTIABLE CONSIGNMENT NOTE
                 </td>
             </tr>

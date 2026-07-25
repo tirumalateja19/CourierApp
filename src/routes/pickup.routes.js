@@ -4,6 +4,7 @@ import userAuth from "../middleware/auth.middleware.js";
 import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
 import { JobItem } from "../model/JobItem.model.js";
 import { Job } from "../model/Job.model.js";
+import ClientInvoice from "../model/ClientInvoice.model.js";
 import upload from "../config/multer.js";
 import { JobPhoto } from "../model/JobPhoto.model.js";
 import pdfQueue from "../queues/pdfQueue.js";
@@ -242,10 +243,27 @@ pickupRouter.post(
           .status(400)
           .json({ message: "Please add receiver details before proceeding" });
       }
-      if (!jobData.weight || !jobData.price) {
+
+      const existingInvoice = await ClientInvoice.findOne({ jobId: id }).sort({
+        createdAt: -1,
+      });
+      if (existingInvoice && jobData.updatedAt <= existingInvoice.createdAt) {
+        return res
+          .status(400)
+          .json({ message: "No changes detected since last generation" });
+      }
+
+      if (!jobData.packages || jobData.packages.length === 0) {
+        return res.status(400).json({
+          message: "Please add package details before proceeding",
+        });
+      }
+
+      const missingWeight = jobData.packages.some((pkg) => !pkg.weight);
+      if (missingWeight || !jobData.price) {
         return res.status(400).json({
           message:
-            "Weight and price are required to submit. Use defer-invoice if unavailable.",
+            "Weight for every package and price are required to submit. Use defer-invoice if unavailable.",
         });
       }
       await Job.findByIdAndUpdate(id, {
@@ -296,6 +314,16 @@ pickupRouter.post(
           .status(400)
           .json({ message: "Please add receiver details before proceeding" });
       }
+
+      const existingInvoice = await ClientInvoice.findOne({ jobId: id }).sort({
+        createdAt: -1,
+      });
+      if (existingInvoice && jobData.updatedAt <= existingInvoice.createdAt) {
+        return res
+          .status(400)
+          .json({ message: "No changes detected since last generation" });
+      }
+
       await Job.findByIdAndUpdate(id, {
         invoiceStatus: "pending_office_completion",
         status: AtOffice,
