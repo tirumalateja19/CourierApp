@@ -378,13 +378,7 @@ jobRouter.get("/api/jobs/:id/pod-slip", userAuth, isAdmin, async (req, res) => {
 jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const {
-      price,
-      weight,
-      dimensionsLength,
-      dimensionsBreadth,
-      dimensionsHeight,
-    } = req.body;
+    const { price, packages } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).send("Invalid job id");
@@ -397,16 +391,23 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
 
     const updates = {};
     if (price !== undefined) updates.price = price;
-    if (weight !== undefined) updates.weight = weight;
-    if (dimensionsLength !== undefined)
-      updates.dimensionsLength = dimensionsLength;
-    if (dimensionsBreadth !== undefined)
-      updates.dimensionsBreadth = dimensionsBreadth;
-    if (dimensionsHeight !== undefined)
-      updates.dimensionsHeight = dimensionsHeight;
+    if (packages !== undefined) updates.packages = packages;
 
+    let updatedJob = jobData;
     if (Object.keys(updates).length > 0) {
-      await Job.findByIdAndUpdate(id, updates, { runValidators: true });
+      updatedJob = await Job.findByIdAndUpdate(id, updates, {
+        runValidators: true,
+        returnDocument: "after",
+      });
+    }
+
+    const existingInvoice = await ClientInvoice.findOne({ jobId: id }).sort({
+      createdAt: -1,
+    });
+    if (existingInvoice && updatedJob.updatedAt <= existingInvoice.createdAt) {
+      return res
+        .status(400)
+        .json({ message: "No changes detected since last generation" });
     }
 
     await pdfQueue.add("generate-invoice", {
