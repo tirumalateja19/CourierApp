@@ -11,11 +11,11 @@ import pickupRouter from "./routes/pickup.routes.js";
 import "./workers/pdfWorker.js"; // just importing starts it listening
 import shipmentRouter from "./routes/shipment.routes.js";
 const app = express();
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "https://courier-it.netlify.app"],
     credentials: true,
   }),
 );
