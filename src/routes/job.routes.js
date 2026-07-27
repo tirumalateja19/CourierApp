@@ -10,6 +10,7 @@ import ClientInvoice from "../model/ClientInvoice.model.js";
 import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
 import { PodSlip } from "../model/PodSlip.model.js";
 import { Shipment } from "../model/Shipment.model.js";
+import pdfQueue from "../queues/pdfQueue.js";
 const jobRouter = Router();
 
 //create new-job
@@ -221,7 +222,7 @@ jobRouter.patch("/api/jobs/:id/status", userAuth, isAdmin, async (req, res) => {
     const updateJob = await Job.findByIdAndUpdate(
       id,
       { status: status },
-      { runValidators: true,returnDocument: "after" },
+      { runValidators: true, returnDocument: "after" },
     );
     if (!updateJob) {
       return res.status(400).json({ message: "Job not found" });
@@ -378,7 +379,7 @@ jobRouter.get("/api/jobs/:id/pod-slip", userAuth, isAdmin, async (req, res) => {
 jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const { price, packages } = req.body;
+    let { price, packages } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).send("Invalid job id");
@@ -387,6 +388,10 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
     const jobData = await Job.findById(id);
     if (!jobData) {
       return res.status(404).json({ message: "Job not found" });
+    }
+    if (price === undefined || packages === undefined) {
+      price = jobData.price;
+      packages = jobData.packages;
     }
 
     const updates = {};

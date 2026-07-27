@@ -9,6 +9,7 @@ import upload from "../config/multer.js";
 import { JobPhoto } from "../model/JobPhoto.model.js";
 import pdfQueue from "../queues/pdfQueue.js";
 import createAuditLog from "../utils/createAuditLog.js";
+import { PodSlip } from "../model/PodSlip.model.js";
 const pickupRouter = Router();
 
 //add details
@@ -315,10 +316,11 @@ pickupRouter.post(
           .json({ message: "Please add receiver details before proceeding" });
       }
 
-      const existingInvoice = await ClientInvoice.findOne({ jobId: id }).sort({
+      const existingPodSlip = await PodSlip.findOne({ jobId: id }).sort({
         createdAt: -1,
       });
-      if (existingInvoice && jobData.updatedAt <= existingInvoice.createdAt) {
+
+      if (existingPodSlip && jobData.updatedAt <= existingPodSlip.createdAt) {
         return res
           .status(400)
           .json({ message: "No changes detected since last generation" });
@@ -326,7 +328,7 @@ pickupRouter.post(
 
       await Job.findByIdAndUpdate(id, {
         invoiceStatus: "pending_office_completion",
-        status: AtOffice,
+        status: "AtOffice",
       });
       await pdfQueue.add("generate-pod-slip", {
         jobId: id,
