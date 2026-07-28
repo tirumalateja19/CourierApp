@@ -379,7 +379,7 @@ jobRouter.get("/api/jobs/:id/pod-slip", userAuth, isAdmin, async (req, res) => {
 jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    let { price, packages } = req.body;
+    const { price, packages } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).send("Invalid job id");
@@ -388,10 +388,6 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
     const jobData = await Job.findById(id);
     if (!jobData) {
       return res.status(404).json({ message: "Job not found" });
-    }
-    if (price === undefined || packages === undefined) {
-      price = jobData.price;
-      packages = jobData.packages;
     }
 
     const updates = {};
@@ -403,6 +399,12 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
       updatedJob = await Job.findByIdAndUpdate(id, updates, {
         runValidators: true,
         returnDocument: "after",
+      });
+    }
+
+    if (!updatedJob.price || !updatedJob.packages?.length) {
+      return res.status(400).json({
+        message: "Price and package details are required to generate invoice",
       });
     }
 
