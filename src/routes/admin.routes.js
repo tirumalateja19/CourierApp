@@ -34,10 +34,12 @@ adminRouter.post("/api/admin/login", async (req, res) => {
       { expiresIn: "1d" },
     );
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "none",
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 24 * 60 * 60 * 1000, // 1 day in ms
     });
 
