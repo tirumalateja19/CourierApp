@@ -6,13 +6,14 @@ A MERN-stack courier management system backend built with Node.js, Express, and 
 
 ## Tech Stack
 
-- **Runtime:** Node.js, Express
-- **Database:** MongoDB (Mongoose)
-- **Auth:** JWT (httpOnly cookies)
-- **File Storage:** Cloudinary (photos + generated PDFs)
-- **File Uploads:** Multer + multer-storage-cloudinary
-- **Queue / Background Jobs:** BullMQ + Redis (Upstash)
-- **PDF Generation:** Puppeteer (HTML → PDF)
+| **Category** | **Technology** |
+| :--- | :--- |
+| **Runtime** | [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/) [![Express](https://img.shields.io/badge/Express-5.x-000000?logo=express&logoColor=white)](https://expressjs.com/) |
+| **Database** | [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/) [![Mongoose](https://img.shields.io/badge/Mongoose-ODM-880000?logo=mongoose&logoColor=white)](https://mongoosejs.com/) |
+| **Auth & Security** | [![JWT](https://img.shields.io/badge/JWT-httpOnly_Cookies-000000?logo=jsonwebtokens&logoColor=white)](https://jwt.io/) |
+| **File Storage** | [![Cloudinary](https://img.shields.io/badge/Cloudinary-Media_%26_PDFs-3448C5?logo=cloudinary&logoColor=white)](https://cloudinary.com/) [![Multer](https://img.shields.io/badge/Multer-File_Uploads-FF6C37?logo=npm&logoColor=white)](https://www.npmjs.com/package/multer) |
+| **Background Queue** | [![BullMQ](https://img.shields.io/badge/BullMQ-Job_Queue-E72C41?logo=redis&logoColor=white)](https://docs.bullmq.io/) [![Upstash](https://img.shields.io/badge/Upstash-Serverless_Redis-00E9A3?logo=upstash&logoColor=white)](https://upstash.com/) |
+| **PDF Generation** | [![Puppeteer](https://img.shields.io/badge/Puppeteer-HTML_to_PDF-40B5A4?logo=puppeteer&logoColor=white)](https://pptr.dev/) |
 
 ## Architecture Overview
 
