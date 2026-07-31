@@ -391,8 +391,16 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
     }
 
     const updates = {};
-    if (price !== undefined) updates.price = price;
-    if (packages !== undefined) updates.packages = packages;
+    // Respect string schema for price
+    if (price !== undefined && String(price).trim() !== "") {
+      updates.price = String(price).trim();
+    }
+    if (packages !== undefined && Array.isArray(packages)) {
+      updates.packages = packages;
+    }
+
+    // Always update status so the job leaves "pending_office_completion"
+    updates.invoiceStatus = "generated_by_admin";
 
     let updatedJob = jobData;
     if (Object.keys(updates).length > 0) {
@@ -402,29 +410,43 @@ jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
       });
     }
 
+    // 1. Validate required fields exist
     if (!updatedJob.price || !updatedJob.packages?.length) {
       return res.status(400).json({
         message: "Price and package details are required to generate invoice",
       });
     }
 
-    const existingInvoice = await ClientInvoice.findOne({ jobId: id }).sort({
-      createdAt: -1,
-    });
-    if (existingInvoice && updatedJob.updatedAt <= existingInvoice.createdAt) {
-      return res
-        .status(400)
-        .json({ message: "No changes detected since last generation" });
+    // 2. Ensure every package has a weight
+    const missingWeight = updatedJob.packages.some((pkg) => !pkg.weight);
+    if (missingWeight) {
+      return res.status(400).json({
+        message:
+          "Every package must have a valid weight before generating an invoice",
+      });
     }
 
-    await pdfQueue.add("generate-invoice", {
-      jobId: id,
-      generatedById: req.user.id,
-      generatedByRole: req.user.role,
-      generatedByName: req.user.userName,
-    });
+    // 3. Enqueue Invoice PDF Generation (Timestamp check removed for Admin!)
+    await pdfQueue.add(
+      "generate-invoice",
+      {
+        jobId: id,
+        generatedById: req.user.id,
+        generatedByRole: req.user.role,
+        generatedByName: req.user.userName,
+      },
+      {
+        // Ensures BullMQ drops any identical request if one is currently waiting or processing
+        jobId: `invoice-${id}`,
+        // Clears the lock from Redis once the job finishes, allowing future regenerations
+        removeOnComplete: true,
+      },
+    );
 
-    res.status(200).json({ message: "Invoice generation triggered" });
+    res.status(200).json({
+      message: "Invoice generation triggered successfully",
+      invoiceStatus: updatedJob.invoiceStatus,
+    });
   } catch (error) {
     res
       .status(400)

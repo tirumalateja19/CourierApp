@@ -109,9 +109,13 @@ const jobs = new mongoose.Schema(
     invoiceStatus: {
       type: String,
       enum: {
-        values: ["generated_at_pickup", "pending_office_completion"],
+        values: [
+          "generated_at_pickup",
+          "pending_office_completion",
+          "generated_by_admin",
+        ],
+        message: "{VALUE} is not a valid status",
       },
-      message: "{VALUE} is not a valid status",
     },
     locked: {
       type: Boolean,

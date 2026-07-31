@@ -271,16 +271,30 @@ pickupRouter.post(
         invoiceStatus: "generated_at_pickup",
         status: "PickedUp",
       });
-      await pdfQueue.add("generate-invoice", {
-        jobId: id,
-        generatedById: req.user.id,
-        generatedByRole: req.user.role,
-        generatedByName: req.user.userName,
-      });
-      await pdfQueue.add("generate-pod-slip", {
-        jobId: id,
-        generatedById: req.user.id,
-      });
+      await pdfQueue.add(
+        "generate-invoice",
+        {
+          jobId: id,
+          generatedById: req.user.id,
+          generatedByRole: req.user.role,
+          generatedByName: req.user.userName,
+        },
+        {
+          jobId: `invoice-${id}`,
+          removeOnComplete: true,
+        },
+      );
+      await pdfQueue.add(
+        "generate-pod-slip",
+        {
+          jobId: id,
+          generatedById: req.user.id,
+        },
+        {
+          jobId: `pod-${id}`,
+          removeOnComplete: true,
+        },
+      );
 
       res.status(200).json({ message: "Job submitted, PDFs generating" });
     } catch (error) {
@@ -330,10 +344,17 @@ pickupRouter.post(
         invoiceStatus: "pending_office_completion",
         status: "AtOffice",
       });
-      await pdfQueue.add("generate-pod-slip", {
-        jobId: id,
-        generatedById: req.user.id,
-      });
+      await pdfQueue.add(
+        "generate-pod-slip",
+        {
+          jobId: id,
+          generatedById: req.user.id,
+        },
+        {
+          jobId: `pod-${id}`,
+          removeOnComplete: true,
+        },
+      );
 
       res
         .status(200)
