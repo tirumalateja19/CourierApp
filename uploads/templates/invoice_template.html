@@ -6,94 +6,226 @@
     <title>International Airway Bill</title>
     <style>
         /* Base reset and styling */
-        body {
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 20px;
-            background: #ececec;
-            font-family: Arial, Helvetica, sans-serif;
+            padding: 0;
+        }
+
+        body {
+            background: #f4f6f9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #111827;
+            padding: 24px;
+            font-size: 13px;
+            line-height: 1.5;
         }
 
         .container {
             width: 100%;
             max-width: 800px;
-            margin: auto;
-            background: #fff;
-            border: 2px solid #1d3f8b;
-            box-sizing: border-box;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
-        /* Table structural rules */
-        table {
+        /* --- Header Section --- */
+        .header {
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 24px 30px;
+            display: table;
             width: 100%;
-            border-collapse: collapse;
+        }
+
+        .header-left {
+            display: table-cell;
+            vertical-align: middle;
+            width: 60%;
+        }
+
+        .header-right {
+            display: table-cell;
+            vertical-align: middle;
+            width: 40%;
+            text-align: right;
+        }
+
+        .company-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .company-contact {
+            font-size: 12px;
+            color: #cbd5e1;
+            margin-top: 4px;
+        }
+
+        .document-title {
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #38bdf8;
+        }
+
+        /* --- Layout Grid --- */
+        .section {
+            padding: 24px 30px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .grid-2 {
+            display: table;
+            width: 100%;
             table-layout: fixed;
         }
 
-        td {
-            border: 1px solid #1d3f8b;
-            padding: 8px;
+        .col {
+            display: table-cell;
             vertical-align: top;
-            word-wrap: break-word;
-            /* Prevents long strings from breaking layout */
+            width: 50%;
+            padding-right: 20px;
         }
 
-        /* Utility classes */
-        .bg-blue {
-            background-color: #1d3f8b !important;
-            color: #fff !important;
+        .col:last-child {
+            padding-right: 0;
+            padding-left: 20px;
+            border-left: 1px solid #f1f5f9;
+        }
+
+        /* --- Labels & Typography --- */
+        .label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #0f172a;
+        }
+
+        .detail-group {
+            margin-bottom: 16px;
+        }
+
+        .detail-group:last-child {
+            margin-bottom: 0;
+        }
+
+        /* --- Packages Table --- */
+        table.table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        table.table th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 10px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        table.table th.text-right,
+        table.table td.text-right {
+            text-align: right;
+        }
+
+        table.table th.text-center,
+        table.table td.text-center {
             text-align: center;
         }
 
-        .valign-middle {
-            vertical-align: middle;
-        }
-
-        .section-min-height {
-            min-height: 120px;
-        }
-
-        .text-lg {
-            font-size: 22px;
-            font-weight: bold;
-        }
-
-        .text-sm {
+        table.table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1f5f9;
             font-size: 13px;
+            color: #1e293b;
         }
 
-        .text-xl {
-            font-size: 24px;
-            font-weight: bold;
-            color: #1d3f8b;
+        table.table tr.total-row td {
+            font-weight: 700;
+            background-color: #f8fafc;
+            border-top: 2px solid #e2e8f0;
+            border-bottom: none;
+            color: #0f172a;
+            font-size: 14px;
         }
 
-        /* Inner table spacing fixes */
-        table.inner-table {
-            table-layout: auto;
+        /* --- Footer Section --- */
+        .footer-grid {
+            display: table;
+            width: 100%;
+            padding: 20px 30px;
+            background-color: #f8fafc;
         }
 
-        table.inner-table td {
-            border: 1px solid #1d3f8b;
-            padding: 6px;
-            text-align: center;
+        .footer-left {
+            display: table-cell;
+            vertical-align: middle;
+            width: 65%;
             font-size: 12px;
+            color: #475569;
+        }
+
+        .footer-right {
+            display: table-cell;
+            vertical-align: middle;
+            width: 35%;
+            text-align: right;
+        }
+
+        .badge-total {
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 10px 18px;
+            border-radius: 6px;
+            display: inline-block;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .legal-footer {
+            padding: 14px 30px;
+            background-color: #0f172a;
+            color: #cbd5e1;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
         }
 
         /* --- PDF & Print Specific Fixes --- */
         @media print {
             body {
-                background: #fff;
+                background: #ffffff;
                 padding: 0;
-                /* Removes outer gray space on the PDF page */
             }
 
             .container {
                 max-width: 100%;
-                border: 2px solid #1d3f8b;
-                margin: 0;
+                border: none;
+                border-radius: 0;
+                box-shadow: none;
             }
 
-            /* Forces the PDF generator to keep the blue backgrounds */
             * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -104,123 +236,100 @@
 
 <body>
     <div class="container">
-        <table>
-            <!-- Header Row -->
-            <tr>
-                <td class="bg-blue valign-middle" style="width:50%; padding:12px;">
-                    <div class="text-lg">INTERNATIONAL COURIER SERVICES</div>
-                    <div class="text-sm" style="margin-top:8px;">
-                        <b>CELL:</b> {{cell}} &nbsp;&nbsp;|&nbsp;&nbsp; <b>EMAIL:</b> {{email}}
+        <!-- Header Banner -->
+        <div class="header">
+            <div class="header-left">
+                <div class="company-title">INTERNATIONAL COURIER SERVICES</div>
+                <div class="company-contact">
+                    <b>CELL:</b> {{cell}} &nbsp;|&nbsp; <b>EMAIL:</b> {{email}}
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="document-title">Airway Bill</div>
+                <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Ref: <b>{{referenceNo}}</b></div>
+            </div>
+        </div>
+
+        <!-- Addresses & Consignment Details -->
+        <div class="section">
+            <div class="grid-2">
+                <!-- Sender / Consignor -->
+                <div class="col">
+                    <div class="label">Sender (Consignor)</div>
+                    <div class="detail-group">
+                        <div class="value">{{senderName}}</div>
+                        <div style="color:#475569; margin-top:2px;">{{senderPhone}}</div>
                     </div>
-                </td>
-                <td class="bg-blue valign-middle text-lg" style="width:50%;">
-                    INTERNATIONAL AIRWAY BILL
-                </td>
-            </tr>
-
-            <!-- Reference & Consignee Row -->
-            <tr>
-                <td>
-                    <b>Consignee:</b><br>
-                    {{senderName}}
-                </td>
-                <td>
-                    <b>Reference No:</b> {{referenceNo}}<br><br>
-                    <b>Consignee:</b><br>
-                    {{receiverName}}
-                </td>
-            </tr>
-
-            <!-- Address Row -->
-            <tr>
-                <td>
-                    <div style="padding-bottom:6px; border-bottom:1px solid #1d3f8b;">
-                        <b>Tel No:</b> {{senderPhone}}
+                    <div class="detail-group">
+                        <div class="label">Address</div>
+                        <div style="color:#334155;">
+                            {{senderAddress}}<br>
+                            <b>City:</b> {{senderCity}}
+                        </div>
                     </div>
-                    <div class="section-min-height" style="padding-top:6px;">
-                        <b>Address:</b><br>
-                        {{senderAddress}}
+                </div>
+
+                <!-- Receiver / Consignee -->
+                <div class="col">
+                    <div class="label">Receiver (Consignee)</div>
+                    <div class="detail-group">
+                        <div class="value">{{receiverName}}</div>
+                        <div style="color:#475569; margin-top:2px;">{{receiverPhone}}</div>
                     </div>
-                </td>
-                <td>
-                    <div style="padding-bottom:6px; border-bottom:1px solid #1d3f8b;">
-                        <b>Tel No:</b> {{receiverPhone}}
+                    <div class="detail-group">
+                        <div class="label">Address</div>
+                        <div style="color:#334155;">
+                            {{receiverAddress}}<br>
+                            <b>City:</b> {{receiverCity}} &nbsp;|&nbsp; <b>Zip:</b> {{zipCode}}
+                        </div>
                     </div>
-                    <div class="section-min-height" style="padding-top:6px;">
-                        <b>Address:</b><br>
-                        {{receiverAddress}}
-                    </div>
-                </td>
-            </tr>
+                </div>
+            </div>
+        </div>
 
-            <!-- City & Zip Row -->
-            <tr>
-                <td><b>City:</b> {{senderCity}}</td>
-                <td style="padding:0;">
-                    <!-- Using a proper inner table instead of floating elements -->
-                    <table style="width:100%; border-collapse:collapse; height:100%;">
-                        <tr>
-                            <td style="border:none; border-right:1px solid #1d3f8b; width:50%;">
-                                <b>City:</b> {{receiverCity}}
-                            </td>
-                            <td style="border:none; width:50%;">
-                                <b>Zip:</b> {{zipCode}}
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
+        <!-- Packages Section (2-Column Table) -->
+        <div class="section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span class="label" style="margin-bottom:0;">Package Breakdown</span>
+                <span style="font-size:12px; color:#475569;">Total Packages: <b>{{packages}}</b></span>
+            </div>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Package #</th>
+                        <th class="text-right" style="width: 65%;">Weight (kg)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{packagesRows}}
+                    <tr class="total-row">
+                        <td>Total Chargeable Weight</td>
+                        <td class="text-right">{{totalWeight}} kg</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-            <!-- Packages Table Row -->
-            <tr>
-                <td colspan="2" style="padding:0;">
-                    <div style="padding:8px 8px 4px;"><b>Packages:</b> {{packages}}</div>
-                    <table class="inner-table" style="width:100%; border-collapse:collapse;">
-                        <tr class="bg-blue" style="font-size:12px;">
-                            <td style="border:1px solid #1d3f8b; text-align:center;">#</td>
-                            <td style="border:1px solid #1d3f8b; text-align:center;">Weight</td>
-                            <td style="border:1px solid #1d3f8b; text-align:center;">Dimensions (L x B x H)</td>
-                            <td style="border:1px solid #1d3f8b; text-align:center;">Vol. Weight</td>
-                        </tr>
-                        {{packagesRows}}
-                        <tr style="font-weight:bold; font-size:13px;">
-                            <td style="border:1px solid #1d3f8b; text-align:center;">Total</td>
-                            <td style="border:1px solid #1d3f8b; text-align:center;">{{totalWeight}}</td>
-                            <td style="border:1px solid #1d3f8b;"></td>
-                            <td style="border:1px solid #1d3f8b; text-align:center;">{{totalVolWeight}}</td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
+        <!-- Guidelines & Totals Footer -->
+        <div class="footer-grid">
+            <div class="footer-left">
+                <div class="label">Guidelines & Handling</div>
+                <div style="color:#475569; margin-bottom: 12px;">{{guidelines}}</div>
 
-            <!-- Guidelines & Total Row -->
-            <tr>
-                <td>
-                    <b>Guidelines</b><br>
-                    {{guidelines}}
-                </td>
-                <td class="text-xl">
-                    Total: {{total}}
-                </td>
-            </tr>
+                <div style="font-size:11px; color:#64748b;">
+                    <b>Pickup Name:</b> {{pickupName}} &nbsp;|&nbsp; <b>Staff ID:</b> {{pickupId}}
+                </div>
+            </div>
+            <div class="footer-right">
+                <div class="label" style="margin-bottom:6px;">Total Charges</div>
+                <div class="badge-total">{{total}}</div>
+            </div>
+        </div>
 
-            <!-- Footer Row -->
-            <tr>
-                <td style="padding:0;">
-                    <!-- Replaced problematic float:right with a reliable flex/table structure -->
-                    <table class="inner-table" style="width:100%; padding:8px;">
-                        <tr>
-                            <td style="text-align:left; border:none;"><b>Pick Up Name:</b> {{pickupName}}</td>
-                            <td style="text-align:right; border:none;"><b>ID:</b> {{pickupId}}</td>
-                        </tr>
-                    </table>
-                </td>
-                <td class="bg-blue valign-middle" style="font-weight:bold;">
-                    NON NEGOTIABLE CONSIGNMENT NOTE
-                </td>
-            </tr>
-
-        </table>
+        <!-- Non-Negotiable Footer Strip -->
+        <div class="legal-footer">
+            Non-Negotiable Consignment Note
+        </div>
     </div>
 </body>
 

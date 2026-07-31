@@ -91,6 +91,24 @@
       font-weight: bold;
       background: #eef1fa;
     }
+
+    .summary-box {
+      margin-top: 15px;
+      padding: 12px 16px;
+      background: #eef1fa;
+      border: 1px solid #1d3f8b;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .summary-box span {
+      margin-left: 10px;
+      color: #1d3f8b;
+      font-size: 16px;
+    }
   </style>
 </head>
 
@@ -145,7 +163,7 @@
     </table>
   </div>
 
-  <!-- PAGE 2: Items, Weight, Dimensions -->
+  <!-- PAGE 2: Items, Weight -->
   <div class="page">
     <div class="header">ITEMS & PACKAGE DETAILS</div>
 
@@ -164,17 +182,16 @@
       <tr>
         <th>#</th>
         <th>Weight</th>
-        <th>Dimensions (L x B x H)</th>
-        <th>Vol. Weight</th>
       </tr>
       {{packagesRows}}
       <tr class="total-row">
         <td>Total</td>
         <td>{{totalWeight}}</td>
-        <td></td>
-        <td>{{totalVolWeight}}</td>
       </tr>
     </table>
+    <div class="summary-box">
+      Total Charges: <span>{{total}}</span>
+    </div>
   </div>
 
   <!-- PAGE 3+: Photos, one per page -->

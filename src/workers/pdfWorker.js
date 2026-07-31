@@ -28,27 +28,28 @@ const uploadPdfToCloudinary = (buffer, folder) => {
     stream.end(buffer);
   });
 };
+
 const buildPackagesRows = (packages) => {
   let totalWeight = 0;
-  let totalVolWeight = 0;
+  // let totalVolWeight = 0;
 
   const rows = packages
     .map((pkg, index) => {
-      const volWeight = (pkg.length * pkg.breadth * pkg.height) / 5000;
-      totalWeight += pkg.weight;
-      totalVolWeight += volWeight;
+      // const volWeight = (pkg.length * pkg.breadth * pkg.height) / 5000;
+      totalWeight += Number(pkg.weight) || 0;
+      // totalVolWeight += volWeight;
       return `
     <tr>
       <td>Package ${index + 1}</td>
-      <td>${pkg.weight}</td>
-      <td>${pkg.length} x ${pkg.breadth} x ${pkg.height}</td>
-      <td>${volWeight.toFixed(2)}</td>
+      <td class="text-right">${pkg.weight} kg</td>
+      <!-- <td>${pkg.length} x ${pkg.breadth} x ${pkg.height}</td> -->
     </tr>
   `;
     })
     .join("");
 
-  return { rows, totalWeight, totalVolWeight: totalVolWeight.toFixed(2) };
+  // return { rows, totalWeight, totalVolWeight: totalVolWeight.toFixed(2) };
+  return { rows, totalWeight: totalWeight.toFixed(2) };
 };
 
 const pdfWorker = new Worker(
@@ -64,8 +65,20 @@ const pdfWorker = new Worker(
       const {
         rows: packagesRows,
         totalWeight,
-        totalVolWeight,
+        // totalVolWeight,
       } = buildPackagesRows(jobData.packages);
+
+      // Check if admin triggered it and if a valid price string exists
+      const isAdmin = generatedByRole === "admin";
+      const hasPrice =
+        jobData.price &&
+        jobData.price.trim() !== "" &&
+        jobData.price.trim() !== "0";
+
+      // If Admin generated it -> show "₹ <price>"
+      // If Partner generated it (or no price set) -> show "PENDING"
+      const displayTotal =
+        isAdmin && hasPrice ? `₹ ${jobData.price}` : "PENDING";
 
       const html = renderTemplate(
         path.resolve("uploads/templates/invoice_template.html"),
@@ -84,11 +97,10 @@ const pdfWorker = new Worker(
           referenceNo: jobId,
           packagesRows,
           totalWeight,
-          totalVolWeight,
           packages: jobData.numberOfPackages,
           guidelines:
             "Please handle with care. Do not bend or crush the package.",
-          total: jobData.price,
+          total: displayTotal, 
           pickupName: generatedByName,
           pickupId: generatedById,
         },
@@ -132,7 +144,7 @@ const pdfWorker = new Worker(
       const {
         rows: packagesRows,
         totalWeight,
-        totalVolWeight,
+        // totalVolWeight,
       } = buildPackagesRows(jobData.packages);
       const itemRows = items
         .map(
@@ -158,7 +170,14 @@ const pdfWorker = new Worker(
         )
         .join("");
 
-        
+      const hasValidPrice =
+        jobData.price &&
+        jobData.price.toString().trim() !== "" &&
+        jobData.price.toString().trim() !== "0" &&
+        jobData.price.toString().trim() !== "1";
+
+      // If a valid price exists, show "₹ <price>", otherwise default to "PENDING"
+      const displayTotal = hasValidPrice ? `₹ ${jobData.price}` : "PENDING";
 
       const html = renderTemplate(
         path.resolve("uploads/templates/podslip_template.html"),
@@ -176,9 +195,9 @@ const pdfWorker = new Worker(
           itemRows,
           packagesRows,
           totalWeight,
-          totalVolWeight,
           numberOfPackages: jobData.numberOfPackages,
           photoPages,
+          total: displayTotal,
         },
       );
 
