@@ -10,6 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^149.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.79.3",
     "cloudinary": "^1.41.3",
@@ -23,7 +24,7 @@
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^4.0.0",
     "nodemon": "^3.1.14",
-    "puppeteer": "^25.3.0",
+    "puppeteer-core": "^25.4.0",
     "validator": "^13.15.35"
   }
 }

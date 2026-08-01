@@ -1,5 +1,6 @@
 import { Worker } from "bullmq";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 import connection from "../config/redis.js";
 import cloudinary from "../config/cloudinary.js";
 import renderTemplate from "../utils/renderTemplate.js";
@@ -31,30 +32,35 @@ const uploadPdfToCloudinary = (buffer, folder) => {
 
 const buildPackagesRows = (packages) => {
   let totalWeight = 0;
-  // let totalVolWeight = 0;
 
   const rows = packages
     .map((pkg, index) => {
-      // const volWeight = (pkg.length * pkg.breadth * pkg.height) / 5000;
       totalWeight += Number(pkg.weight) || 0;
-      // totalVolWeight += volWeight;
       return `
     <tr>
       <td>Package ${index + 1}</td>
       <td class="text-right">${pkg.weight} kg</td>
-      <!-- <td>${pkg.length} x ${pkg.breadth} x ${pkg.height}</td> -->
     </tr>
   `;
     })
     .join("");
 
-  // return { rows, totalWeight, totalVolWeight: totalVolWeight.toFixed(2) };
   return { rows, totalWeight: totalWeight.toFixed(2) };
 };
 
 const pdfWorker = new Worker(
   "pdf-generation",
   async (job) => {
+    // Helper configuration for headless chromium on Render/cloud environments
+    const launchBrowser = async () => {
+      return await puppeteer.launch({
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
+    };
+
     if (job.name === "generate-invoice") {
       const { jobId, generatedById, generatedByRole, generatedByName } =
         job.data;
@@ -62,21 +68,16 @@ const pdfWorker = new Worker(
       const jobData = await Job.findById(jobId);
       if (!jobData) throw new Error("Job not found");
 
-      const {
-        rows: packagesRows,
-        totalWeight,
-        // totalVolWeight,
-      } = buildPackagesRows(jobData.packages);
+      const { rows: packagesRows, totalWeight } = buildPackagesRows(
+        jobData.packages,
+      );
 
-      // Check if admin triggered it and if a valid price string exists
       const isAdmin = generatedByRole === "admin";
       const hasPrice =
         jobData.price &&
         jobData.price.trim() !== "" &&
         jobData.price.trim() !== "0";
 
-      // If Admin generated it -> show "₹ <price>"
-      // If Partner generated it (or no price set) -> show "PENDING"
       const displayTotal =
         isAdmin && hasPrice ? `₹ ${jobData.price}` : "PENDING";
 
@@ -100,13 +101,13 @@ const pdfWorker = new Worker(
           packages: jobData.numberOfPackages,
           guidelines:
             "Please handle with care. Do not bend or crush the package.",
-          total: displayTotal, 
+          total: displayTotal,
           pickupName: generatedByName,
           pickupId: generatedById,
         },
       );
 
-      const browser = await puppeteer.launch({ args: ["--no-sandbox"] });
+      const browser = await launchBrowser();
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "networkidle0" });
       const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
@@ -141,11 +142,10 @@ const pdfWorker = new Worker(
       if (!jobData) throw new Error("Job not found");
 
       const items = await JobItem.find({ jobId });
-      const {
-        rows: packagesRows,
-        totalWeight,
-        // totalVolWeight,
-      } = buildPackagesRows(jobData.packages);
+      const { rows: packagesRows, totalWeight } = buildPackagesRows(
+        jobData.packages,
+      );
+
       const itemRows = items
         .map(
           (item) => `
@@ -176,7 +176,6 @@ const pdfWorker = new Worker(
         jobData.price.toString().trim() !== "0" &&
         jobData.price.toString().trim() !== "1";
 
-      // If a valid price exists, show "₹ <price>", otherwise default to "PENDING"
       const displayTotal = hasValidPrice ? `₹ ${jobData.price}` : "PENDING";
 
       const html = renderTemplate(
@@ -201,7 +200,7 @@ const pdfWorker = new Worker(
         },
       );
 
-      const browser = await puppeteer.launch({ args: ["--no-sandbox"] });
+      const browser = await launchBrowser();
       const page = await browser.newPage();
       await page.setViewport({ width: 900, height: 1200 });
       await page.setContent(html, { waitUntil: "networkidle0" });
