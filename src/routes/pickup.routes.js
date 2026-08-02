@@ -282,6 +282,7 @@ pickupRouter.post(
         {
           jobId: `invoice-${id}`,
           removeOnComplete: true,
+          removeOnFail: true,
         },
       );
       await pdfQueue.add(
@@ -351,8 +352,9 @@ pickupRouter.post(
           generatedById: req.user.id,
         },
         {
-          jobId: `pod-${id}`,
+          jobId: `invoice-${id}`,
           removeOnComplete: true,
+          removeOnFail: true,
         },
       );
 

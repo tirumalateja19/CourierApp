@@ -1,5 +1,6 @@
 import { Worker } from "bullmq";
-import puppeteer from "puppeteer-core";
+import puppeteerCore from "puppeteer-core";
+import standardPuppeteer from "puppeteer";
 import chromium from "@sparticuz/chromium";
 import connection from "../config/redis.js";
 import cloudinary from "../config/cloudinary.js";
@@ -48,19 +49,31 @@ const buildPackagesRows = (packages) => {
   return { rows, totalWeight: totalWeight.toFixed(2) };
 };
 
+const launchBrowser = async () => {
+  const isRender = process.env.RENDER === "true";
+
+  if (isRender) {
+    console.log(
+      "[pdfWorker] Launching browser via @sparticuz/chromium (Render)",
+    );
+    return await puppeteerCore.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+  } else {
+    console.log("[pdfWorker] Launching browser via standard puppeteer (local)");
+    return await standardPuppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox"],
+    });
+  }
+};
+
 const pdfWorker = new Worker(
   "pdf-generation",
   async (job) => {
-    // Helper configuration for headless chromium on Render/cloud environments
-    const launchBrowser = async () => {
-      return await puppeteer.launch({
-        args: chromium.args,
-        defaultViewport: chromium.defaultViewport,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-      });
-    };
-
     if (job.name === "generate-invoice") {
       const { jobId, generatedById, generatedByRole, generatedByName } =
         job.data;
