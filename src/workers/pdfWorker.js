@@ -1,6 +1,5 @@
 import { Worker } from "bullmq";
 import puppeteerCore from "puppeteer-core";
-import standardPuppeteer from "puppeteer";
 import chromium from "@sparticuz/chromium";
 import connection from "../config/redis.js";
 import cloudinary from "../config/cloudinary.js";
@@ -64,6 +63,7 @@ const launchBrowser = async () => {
     });
   } else {
     console.log("[pdfWorker] Launching browser via standard puppeteer (local)");
+    const { default: standardPuppeteer } = await import("puppeteer");
     return await standardPuppeteer.launch({
       headless: true,
       args: ["--no-sandbox"],
