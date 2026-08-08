@@ -4,7 +4,6 @@ import userAuth from "../middleware/auth.middleware.js";
 import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
 import { JobItem } from "../model/JobItem.model.js";
 import { Job } from "../model/Job.model.js";
-import ClientInvoice from "../model/ClientInvoice.model.js";
 import upload from "../config/multer.js";
 import { JobPhoto } from "../model/JobPhoto.model.js";
 import pdfQueue from "../queues/pdfQueue.js";
@@ -220,95 +219,9 @@ pickupRouter.post(
   },
 );
 
-//submit - generating invoice and pod-slip
-pickupRouter.post(
-  "/api/jobs/pickup/:id/submit",
-  userAuth,
-  verifyPartnerAccess,
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      const jobData = await Job.findById(id);
-      if (!jobData) {
-        return res.status(404).json({ message: "Job not found" });
-      }
-      if (
-        !jobData.receiverName ||
-        !jobData.receiverAddress ||
-        !jobData.receiverNumber ||
-        !jobData.receiverCity ||
-        !jobData.receiverZipCode
-      ) {
-        return res
-          .status(400)
-          .json({ message: "Please add receiver details before proceeding" });
-      }
-
-      const existingInvoice = await ClientInvoice.findOne({ jobId: id }).sort({
-        createdAt: -1,
-      });
-      if (existingInvoice && jobData.updatedAt <= existingInvoice.createdAt) {
-        return res
-          .status(400)
-          .json({ message: "No changes detected since last generation" });
-      }
-
-      if (!jobData.packages || jobData.packages.length === 0) {
-        return res.status(400).json({
-          message: "Please add package details before proceeding",
-        });
-      }
-
-      const missingWeight = jobData.packages.some((pkg) => !pkg.weight);
-      if (missingWeight || !jobData.price) {
-        return res.status(400).json({
-          message:
-            "Weight for every package and price are required to submit. Use defer-invoice if unavailable.",
-        });
-      }
-      await Job.findByIdAndUpdate(id, {
-        invoiceStatus: "generated_at_pickup",
-        status: "PickedUp",
-      });
-      await pdfQueue.add(
-        "generate-invoice",
-        {
-          jobId: id,
-          generatedById: req.user.id,
-          generatedByRole: req.user.role,
-          generatedByName: req.user.userName,
-        },
-        {
-          jobId: `invoice-${id}`,
-          removeOnComplete: true,
-          removeOnFail: true,
-        },
-      );
-      await pdfQueue.add(
-        "generate-pod-slip",
-        {
-          jobId: id,
-          generatedById: req.user.id,
-        },
-        {
-          jobId: `pod-${id}`,
-          removeOnComplete: true,
-        },
-      );
-
-      res.status(200).json({ message: "Job submitted, PDFs generating" });
-    } catch (error) {
-      res
-        .status(400)
-        .json({ message: "Something went wrong", error: error.message });
-    }
-  },
-);
-
 //generating pod-slip
 pickupRouter.post(
-  "/api/jobs/pickup/:id/defer-invoice",
+  "/api/jobs/pickup/:id/submit",
   userAuth,
   verifyPartnerAccess,
   async (req, res) => {
@@ -342,25 +255,25 @@ pickupRouter.post(
       }
 
       await Job.findByIdAndUpdate(id, {
-        invoiceStatus: "pending_office_completion",
         status: "AtOffice",
       });
+
       await pdfQueue.add(
         "generate-pod-slip",
         {
           jobId: id,
           generatedById: req.user.id,
+          generatedByUsername: req.user.userName,
+          actorRole: req.user.role,
         },
         {
-          jobId: `invoice-${id}`,
+          jobId: `pod-slip-${id}`,
           removeOnComplete: true,
           removeOnFail: true,
         },
       );
 
-      res
-        .status(200)
-        .json({ message: "Pod slip generating, invoice deferred to admin" });
+      res.status(200).json({ message: "Pod slip generating" });
     } catch (error) {
       res
         .status(400)

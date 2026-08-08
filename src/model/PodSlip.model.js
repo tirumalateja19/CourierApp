@@ -5,6 +5,7 @@ const podSlip = new mongoose.Schema(
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
+      unique: true,
     },
     generatedById: {
       type: mongoose.Schema.Types.ObjectId,

@@ -4,7 +4,6 @@ import chromium from "@sparticuz/chromium";
 import connection from "../config/redis.js";
 import cloudinary from "../config/cloudinary.js";
 import renderTemplate from "../utils/renderTemplate.js";
-import ClientInvoice from "../model/ClientInvoice.model.js";
 import path from "path";
 import crypto from "crypto";
 import { PodSlip } from "../model/PodSlip.model.js";
@@ -19,7 +18,7 @@ const uploadPdfToCloudinary = (buffer, folder) => {
       {
         resource_type: "raw",
         folder,
-        public_id: `invoice_${Date.now()}.pdf`,
+        public_id: `podslip_${Date.now()}.pdf`,
       },
       (error, result) => {
         if (error) return reject(error);
@@ -74,82 +73,8 @@ const launchBrowser = async () => {
 const pdfWorker = new Worker(
   "pdf-generation",
   async (job) => {
-    if (job.name === "generate-invoice") {
-      const { jobId, generatedById, generatedByRole, generatedByName } =
-        job.data;
-
-      const jobData = await Job.findById(jobId);
-      if (!jobData) throw new Error("Job not found");
-
-      const { rows: packagesRows, totalWeight } = buildPackagesRows(
-        jobData.packages,
-      );
-
-      const isAdmin = generatedByRole === "admin";
-      const hasPrice =
-        jobData.price &&
-        jobData.price.trim() !== "" &&
-        jobData.price.trim() !== "0";
-
-      const displayTotal =
-        isAdmin && hasPrice ? `₹ ${jobData.price}` : "PENDING";
-
-      const html = renderTemplate(
-        path.resolve("uploads/templates/invoice_template.html"),
-        {
-          cell: process.env.CELL,
-          email: process.env.EMAIL,
-          senderName: jobData.clientName,
-          senderPhone: jobData.clientNumber,
-          senderAddress: jobData.clientAddress,
-          senderCity: jobData.clientCity,
-          receiverName: jobData.receiverName,
-          receiverPhone: jobData.receiverNumber,
-          receiverAddress: jobData.receiverAddress,
-          receiverCity: jobData.receiverCity,
-          zipCode: jobData.receiverZipCode,
-          referenceNo: jobId,
-          packagesRows,
-          totalWeight,
-          packages: jobData.numberOfPackages,
-          guidelines:
-            "Please handle with care. Do not bend or crush the package.",
-          total: displayTotal,
-          pickupName: generatedByName,
-          pickupId: generatedById,
-        },
-      );
-
-      const browser = await launchBrowser();
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: "networkidle0" });
-      const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-      await browser.close();
-
-      const uploadResult = await uploadPdfToCloudinary(
-        pdfBuffer,
-        "pickitup/invoices",
-      );
-
-      await ClientInvoice.create({
-        jobId,
-        generatedById,
-        generatedByRole,
-        price: jobData.price,
-        pdfUrl: uploadResult.secure_url,
-      });
-
-      createAuditLog({
-        jobId,
-        actorRole: "system",
-        action: "pdfGenerated",
-      });
-
-      console.log(`Invoice generated for job ${jobId}`);
-    }
-
     if (job.name === "generate-pod-slip") {
-      const { jobId, generatedById } = job.data;
+      const { jobId, generatedById, generatedByUsername, actorRole } = job.data;
 
       const jobData = await Job.findById(jobId);
       if (!jobData) throw new Error("Job not found");
@@ -230,17 +155,28 @@ const pdfWorker = new Worker(
         "pickitup/podslips",
       );
 
-      await PodSlip.create({
-        jobId,
-        generatedById,
-        pdfUrl: uploadResult.secure_url,
-        pdfHash,
+      await PodSlip.findOneAndUpdate(
+        { jobId },
+        {
+          jobId,
+          generatedById,
+          pdfUrl: uploadResult.secure_url,
+          pdfHash,
+        },
+        { upsert: true, returnDocument: "after" },
+      );
+
+      await Job.findByIdAndUpdate(jobId, {
+        podSlipGenerated: true,
+        podGeneratedBy: generatedByUsername,
       });
 
       createAuditLog({
         jobId,
-        actorRole: "system",
-        action: "pdfGenerated",
+        actorId: generatedById,
+        actorName: generatedByUsername,
+        actorRole,
+        action: "podSlipGenerated",
       });
 
       console.log(`Pod slip generated for job ${jobId}`);

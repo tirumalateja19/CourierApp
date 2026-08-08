@@ -6,7 +6,6 @@ import mongoose from "mongoose";
 import Partner from "../model/Partner.model.js";
 import createAuditLog from "../utils/createAuditLog.js";
 import { JobItem } from "../model/JobItem.model.js";
-import ClientInvoice from "../model/ClientInvoice.model.js";
 import verifyPartnerAccess from "../middleware/verifyPartnerAccess.middleware.js";
 import { PodSlip } from "../model/PodSlip.model.js";
 import { Shipment } from "../model/Shipment.model.js";
@@ -320,38 +319,8 @@ jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
   }
 });
 
-//get invoice
-jobRouter.get(
-  "/api/jobs/:id/invoice",
-  userAuth,
-  verifyPartnerAccess,
-  async (req, res) => {
-    try {
-      const { id } = req.params;
-
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send("Invalid job id");
-      }
-
-      const invoice = await ClientInvoice.findOne({ jobId: id }).sort({
-        createdAt: -1,
-      });
-
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not generated yet" });
-      }
-
-      res.status(200).json({ message: "Invoice fetched", invoice });
-    } catch (error) {
-      res
-        .status(400)
-        .json({ message: "Something went wrong", error: error.message });
-    }
-  },
-);
-
 //get pod-slip
-jobRouter.get("/api/jobs/:id/pod-slip", userAuth, isAdmin, async (req, res) => {
+jobRouter.get("/api/jobs/:id/pod-slip", userAuth,verifyPartnerAccess, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -375,77 +344,67 @@ jobRouter.get("/api/jobs/:id/pod-slip", userAuth, isAdmin, async (req, res) => {
   }
 });
 
-//generate invoice - admin
-jobRouter.post("/api/jobs/:id/invoice", userAuth, isAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { price, packages } = req.body;
+//generate pod-slip - admin
+jobRouter.post(
+  "/api/jobs/:id/submit",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).send("Invalid job id");
-    }
+      const jobData = await Job.findById(id);
+      if (!jobData) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (
+        !jobData.receiverName ||
+        !jobData.receiverAddress ||
+        !jobData.receiverNumber ||
+        !jobData.receiverCity ||
+        !jobData.receiverZipCode
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Please add receiver details before proceeding" });
+      }
 
-    const jobData = await Job.findById(id);
-    if (!jobData) {
-      return res.status(404).json({ message: "Job not found" });
-    }
-
-    const updates = {};
-    if (price !== undefined && String(price).trim() !== "") {
-      updates.price = String(price).trim();
-    }
-    if (packages !== undefined && Array.isArray(packages)) {
-      updates.packages = packages;
-    }
-
-    updates.invoiceStatus = "generated_by_admin";
-
-    let updatedJob = jobData;
-    if (Object.keys(updates).length > 0) {
-      updatedJob = await Job.findByIdAndUpdate(id, updates, {
-        runValidators: true,
-        returnDocument: "after",
+      const existingPodSlip = await PodSlip.findOne({ jobId: id }).sort({
+        createdAt: -1,
       });
-    }
 
-    if (!updatedJob.price || !updatedJob.packages?.length) {
-      return res.status(400).json({
-        message: "Price and package details are required to generate invoice",
+      if (existingPodSlip && jobData.updatedAt <= existingPodSlip.createdAt) {
+        return res
+          .status(400)
+          .json({ message: "No changes detected since last generation" });
+      }
+
+      await Job.findByIdAndUpdate(id, {
+        status: "AtOffice",
       });
+
+      await pdfQueue.add(
+        "generate-pod-slip",
+        {
+          jobId: id,
+          generatedById: req.user.id,
+          generatedByUsername: req.user.userName,
+          actorRole: req.user.role,
+        },
+        {
+          jobId: `pod-slip-${id}`,
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      );
+
+      res.status(200).json({ message: "Pod slip generating" });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
     }
-
-    const missingWeight = updatedJob.packages.some((pkg) => !pkg.weight);
-    if (missingWeight) {
-      return res.status(400).json({
-        message:
-          "Every package must have a valid weight before generating an invoice",
-      });
-    }
-
-    await pdfQueue.add(
-      "generate-invoice",
-      {
-        jobId: id,
-        generatedById: req.user.id,
-        generatedByRole: req.user.role,
-        generatedByName: req.user.userName,
-      },
-      {
-        jobId: `invoice-${id}`,
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
-    );
-
-    res.status(200).json({
-      message: "Invoice generation triggered successfully",
-      invoiceStatus: updatedJob.invoiceStatus,
-    });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ message: "Something went wrong", error: error.message });
-  }
-});
+  },
+);
 
 export default jobRouter;

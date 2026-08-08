@@ -29,7 +29,14 @@ const jobs = new mongoose.Schema(
     status: {
       type: String,
       enum: {
-        values: ["Created", "Assigned", "PickedUp", "AtOffice", "Dispatched"],
+        values: [
+          "Created",
+          "Assigned",
+          "PickedUp",
+          "AtOffice",
+          "Dispatched",
+          "Cancelled",
+        ],
         message: "{VALUE} is incorrect status",
       },
       default: "Created",
@@ -106,16 +113,12 @@ const jobs = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    invoiceStatus: {
+    podSlipGenerated: {
+      type: Boolean,
+      default: false,
+    },
+    podGeneratedBy: {
       type: String,
-      enum: {
-        values: [
-          "generated_at_pickup",
-          "pending_office_completion",
-          "generated_by_admin",
-        ],
-        message: "{VALUE} is not a valid status",
-      },
     },
     locked: {
       type: Boolean,
@@ -137,6 +140,22 @@ const jobs = new mongoose.Schema(
     },
     unlockedByAdminName: {
       type: String,
+      default: null,
+    },
+    cancelReason: {
+      type: String,
+      trim: true,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
+    archivedAt: {
+      type: Date,
       default: null,
     },
   },
