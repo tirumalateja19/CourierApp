@@ -202,6 +202,43 @@ adminRouter.patch(
   },
 );
 
+//get audit job details
+adminRouter.get(
+  "/api/jobs/auditedJobs",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { status, assignedToId, fromDate, toDate, clientName } = req.query;
+
+      const filter = {};
+
+      if (status === "Open") {
+        filter.status = {
+          $in: ["Created", "Assigned", "PickedUp", "AtOffice"],
+        };
+      } else if (status === "Closed") {
+        filter.status = { $in: ["Dispatched", "Cancelled"] };
+      } else if (status) {
+        filter.status = status;
+      }
+
+      if (assignedToId) filter.assignedToId = assignedToId;
+      if (clientName) filter.clientName = { $regex: clientName, $options: "i" };
+      if (fromDate || toDate) {
+        filter.createdAt = {};
+        if (fromDate) filter.createdAt.$gte = new Date(fromDate);
+        if (toDate) filter.createdAt.$lte = new Date(toDate);
+      }
+
+      const jobs = await Job.find(filter).sort({ createdAt: -1 });
+      res.status(200).json({ message: "Fetched Successfully", jobs });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+);
+
 //get history
 adminRouter.get(
   "/api/admin/audit-logs/:jobId",
@@ -227,6 +264,100 @@ adminRouter.get(
       res
         .status(400)
         .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
+//archived jobs
+adminRouter.get("/api/jobs/archived", userAuth, isAdmin, async (req, res) => {
+  try {
+    const { assignedToId, fromDate, toDate, clientName } = req.query;
+
+    const filter = { isArchived: true };
+    if (assignedToId) filter.assignedToId = assignedToId;
+    if (clientName) filter.clientName = { $regex: clientName, $options: "i" };
+    if (fromDate || toDate) {
+      filter.createdAt = {};
+      if (fromDate) filter.createdAt.$gte = new Date(fromDate);
+      if (toDate) filter.createdAt.$lte = new Date(toDate);
+    }
+    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+    res.status(200).json({ message: "Fetched Successfully", jobs });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+//archive job
+adminRouter.patch(
+  "/api/jobs/:id/archive",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const jobData = await Job.findByIdAndUpdate(
+        id,
+        {
+          isArchived: true,
+          archivedAt: new Date(),
+        },
+        { runValidators: true, returnDocument: "after" },
+      );
+
+      if (!jobData) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorName: req.user.username,
+        actorRole: req.user.role,
+        action: "jobArchived",
+      });
+
+      res.status(200).json({ message: "Job archived", jobData });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+);
+
+//unarchive
+adminRouter.patch(
+  "/api/jobs/:id/unarchive",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const jobData = await Job.findByIdAndUpdate(
+        id,
+        {
+          isArchived: false,
+          archivedAt: null,
+        },
+        { runValidators: true, returnDocument: "after" },
+      );
+
+      if (!jobData) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorName: req.user.username,
+        actorRole: req.user.role,
+        action: "jobUnarchived",
+      });
+
+      res.status(200).json({ message: "Job unarchived", jobData });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
     }
   },
 );

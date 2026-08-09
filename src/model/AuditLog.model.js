@@ -38,6 +38,8 @@ const auditLogSchema = new mongoose.Schema(
           "jobAutoLocked",
           "jobLocked",
           "jobUnlocked",
+          "jobArchived",
+          "jobUnarchived",
           "itemsEdited",
           "jobDispatched",
           "partnerDeactivated",

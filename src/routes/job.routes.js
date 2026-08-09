@@ -61,8 +61,8 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
   try {
     const { status, assignedToId, fromDate, toDate, clientName } = req.query;
 
-    const filter = {};
-    if (status) filter.status = status;
+    const filter = { isArchived: { $ne: true } };
+    
     if (status === "Open") {
       filter.status = { $in: ["Created", "Assigned", "PickedUp", "AtOffice"] };
     } else if (status === "Closed") {
@@ -70,7 +70,7 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
     } else if (status) {
       filter.status = status;
     }
-
+    
     if (assignedToId) filter.assignedToId = assignedToId;
     if (clientName) filter.clientName = { $regex: clientName, $options: "i" };
     if (fromDate || toDate) {
