@@ -56,14 +56,22 @@ partnerRouter.get("/api/partner/jobs", userAuth, async (req, res) => {
     const { status, fromDate, toDate } = req.query;
 
     const filter = { assignedToId: req.user.id }; // always scoped to this partner
-    if (status) filter.status = status;
+
+    if (status === "Open") {
+      filter.status = { $in: ["Created", "Assigned", "PickedUp", "AtOffice"] };
+    } else if (status === "Closed") {
+      filter.status = { $in: ["Dispatched", "Cancelled"] };
+    } else if (status) {
+      filter.status = status;
+    }
+
     if (fromDate || toDate) {
       filter.createdAt = {};
       if (fromDate) filter.createdAt.$gte = new Date(fromDate);
       if (toDate) filter.createdAt.$lte = new Date(toDate);
     }
 
-    const jobs = await Job.find(filter);
+    const jobs = await Job.find(filter).sort({ createdAt: -1 });
     res.status(200).json({ message: "Fetched Successfully", jobs });
   } catch (err) {
     res.status(400).json({ error: err.message });

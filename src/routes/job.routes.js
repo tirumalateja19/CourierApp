@@ -63,6 +63,14 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
 
     const filter = {};
     if (status) filter.status = status;
+    if (status === "Open") {
+      filter.status = { $in: ["Created", "Assigned", "PickedUp", "AtOffice"] };
+    } else if (status === "Closed") {
+      filter.status = { $in: ["Dispatched", "Cancelled"] };
+    } else if (status) {
+      filter.status = status;
+    }
+
     if (assignedToId) filter.assignedToId = assignedToId;
     if (clientName) filter.clientName = { $regex: clientName, $options: "i" };
     if (fromDate || toDate) {
@@ -71,7 +79,7 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
       if (toDate) filter.createdAt.$lte = new Date(toDate);
     }
 
-    const totalJobs = await Job.find(filter);
+    const totalJobs = await Job.find(filter).sort({ createdAt: -1 });
     res.status(200).json({ message: "Fetched Successfully", totalJobs });
   } catch (err) {
     res.status(400).json({ error: err.message });
