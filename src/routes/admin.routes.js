@@ -148,7 +148,7 @@ adminRouter.patch(
       createAuditLog({
         actorId: req.user.id,
         actorRole: req.user.role,
-        actorName:req.user.userName,
+        actorName: req.user.userName,
         action: "partnerDeactivated",
         previousStatus: "active",
         newStatus: "inactive",
@@ -268,7 +268,7 @@ adminRouter.get(
   },
 );
 
-//archived jobs
+//get archived jobs
 adminRouter.get("/api/jobs/archived", userAuth, isAdmin, async (req, res) => {
   try {
     const { assignedToId, fromDate, toDate, clientName } = req.query;
@@ -325,7 +325,7 @@ adminRouter.patch(
   },
 );
 
-//unarchive
+//unarchive job
 adminRouter.patch(
   "/api/jobs/:id/unarchive",
   userAuth,
@@ -358,6 +358,58 @@ adminRouter.patch(
       res.status(200).json({ message: "Job unarchived", jobData });
     } catch (err) {
       res.status(400).json({ error: err.message });
+    }
+  },
+);
+
+adminRouter.patch(
+  "/api/admin/:id/cancel",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { cancelledReason } = req.body;
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid");
+      }
+      const jobData = await Job.findById(id);
+      if (!jobData) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (jobData.cancelled) {
+        return res
+          .status(200)
+          .json({ message: "Job's already Cancelled", jobData });
+      }
+      const canceledJob = await Job.findByIdAndUpdate(
+        id,
+        {
+          cancelled: true,
+          locked: true,
+          cancelledAt: new Date(),
+          cancelReason: cancelledReason,
+          status: "Cancelled",
+        },
+        { returnDocument: "after" },
+      );
+
+      createAuditLog({
+        jobId: id,
+        actorId: req.user.id,
+        actorRole: req.user.role,
+        actorName: req.user.userName,
+        action: "jobCancelled",
+        previousStatus: jobData.status,
+        newStatus: "Cancelled",
+      });
+      res
+        .status(200)
+        .json({ message: "Job Cancelled successfully", jobData: canceledJob });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
     }
   },
 );

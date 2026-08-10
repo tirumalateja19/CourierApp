@@ -62,7 +62,7 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
     const { status, assignedToId, fromDate, toDate, clientName } = req.query;
 
     const filter = { isArchived: { $ne: true } };
-    
+
     if (status === "Open") {
       filter.status = { $in: ["Created", "Assigned", "PickedUp", "AtOffice"] };
     } else if (status === "Closed") {
@@ -70,7 +70,7 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
     } else if (status) {
       filter.status = status;
     }
-    
+
     if (assignedToId) filter.assignedToId = assignedToId;
     if (clientName) filter.clientName = { $regex: clientName, $options: "i" };
     if (fromDate || toDate) {
@@ -301,6 +301,12 @@ jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
         .status(200)
         .json({ message: "Job's already unLocked", jobData });
     }
+    if (jobData.cancelled) {
+      return res.status(400).json({
+        message:
+          "This job was cancelled and cannot be unlocked. Create a new job instead.",
+      });
+    }
     const unLockedJob = await Job.findByIdAndUpdate(
       id,
       {
@@ -328,85 +334,27 @@ jobRouter.patch("/api/jobs/:id/unlock", userAuth, isAdmin, async (req, res) => {
 });
 
 //get pod-slip
-jobRouter.get("/api/jobs/:id/pod-slip", userAuth,verifyPartnerAccess, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).send("Invalid job id");
-    }
-
-    const podSlip = await PodSlip.findOne({ jobId: id }).sort({
-      createdAt: -1,
-    });
-
-    if (!podSlip) {
-      return res.status(404).json({ message: "Pod slip not generated yet" });
-    }
-
-    res.status(200).json({ message: "Pod slip fetched", podSlip });
-  } catch (error) {
-    res
-      .status(400)
-      .json({ message: "Something went wrong", error: error.message });
-  }
-});
-
-//generate pod-slip - admin
-jobRouter.post(
-  "/api/jobs/:id/submit",
+jobRouter.get(
+  "/api/jobs/:id/pod-slip",
   userAuth,
-  isAdmin,
+  verifyPartnerAccess,
   async (req, res) => {
     try {
       const { id } = req.params;
 
-      const jobData = await Job.findById(id);
-      if (!jobData) {
-        return res.status(404).json({ message: "Job not found" });
-      }
-      if (
-        !jobData.receiverName ||
-        !jobData.receiverAddress ||
-        !jobData.receiverNumber ||
-        !jobData.receiverCity ||
-        !jobData.receiverZipCode
-      ) {
-        return res
-          .status(400)
-          .json({ message: "Please add receiver details before proceeding" });
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).send("Invalid job id");
       }
 
-      const existingPodSlip = await PodSlip.findOne({ jobId: id }).sort({
+      const podSlip = await PodSlip.findOne({ jobId: id }).sort({
         createdAt: -1,
       });
 
-      if (existingPodSlip && jobData.updatedAt <= existingPodSlip.createdAt) {
-        return res
-          .status(400)
-          .json({ message: "No changes detected since last generation" });
+      if (!podSlip) {
+        return res.status(404).json({ message: "Pod slip not generated yet" });
       }
 
-      await Job.findByIdAndUpdate(id, {
-        status: "AtOffice",
-      });
-
-      await pdfQueue.add(
-        "generate-pod-slip",
-        {
-          jobId: id,
-          generatedById: req.user.id,
-          generatedByUsername: req.user.userName,
-          actorRole: req.user.role,
-        },
-        {
-          jobId: `pod-slip-${id}`,
-          removeOnComplete: true,
-          removeOnFail: true,
-        },
-      );
-
-      res.status(200).json({ message: "Pod slip generating" });
+      res.status(200).json({ message: "Pod slip fetched", podSlip });
     } catch (error) {
       res
         .status(400)
@@ -414,5 +362,63 @@ jobRouter.post(
     }
   },
 );
+
+//generate pod-slip - admin
+jobRouter.post("/api/jobs/:id/submit", userAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const jobData = await Job.findById(id);
+    if (!jobData) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+    if (
+      !jobData.receiverName ||
+      !jobData.receiverAddress ||
+      !jobData.receiverNumber ||
+      !jobData.receiverCity ||
+      !jobData.receiverZipCode
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Please add receiver details before proceeding" });
+    }
+
+    const existingPodSlip = await PodSlip.findOne({ jobId: id }).sort({
+      createdAt: -1,
+    });
+
+    if (existingPodSlip && jobData.updatedAt <= existingPodSlip.createdAt) {
+      return res
+        .status(400)
+        .json({ message: "No changes detected since last generation" });
+    }
+
+    await Job.findByIdAndUpdate(id, {
+      status: "AtOffice",
+    });
+
+    await pdfQueue.add(
+      "generate-pod-slip",
+      {
+        jobId: id,
+        generatedById: req.user.id,
+        generatedByUsername: req.user.userName,
+        actorRole: req.user.role,
+      },
+      {
+        jobId: `pod-slip-${id}`,
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+    );
+
+    res.status(200).json({ message: "Pod slip generating" });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+});
 
 export default jobRouter;

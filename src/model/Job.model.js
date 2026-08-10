@@ -142,6 +142,11 @@ const jobs = new mongoose.Schema(
       type: String,
       default: null,
     },
+    cancelled: {
+      type: Boolean,
+      default: false,
+      required: true,
+    },
     cancelReason: {
       type: String,
       trim: true,
