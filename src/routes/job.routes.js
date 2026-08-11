@@ -50,7 +50,7 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       actorName: req.user.userName,
       action: "jobCreated",
     });
-    res.status(201).json({ message: "Job created successfully" });
+    res.status(201).json({ message: "Job created successfully",jobData: job });
   } catch (err) {
     res.status(400).send(err.message);
   }
