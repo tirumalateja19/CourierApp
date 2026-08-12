@@ -210,6 +210,9 @@ adminRouter.get(
   async (req, res) => {
     try {
       const { status, assignedToId, fromDate, toDate, clientName } = req.query;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
 
       const filter = {};
 
@@ -231,15 +234,25 @@ adminRouter.get(
         if (toDate) filter.createdAt.$lte = new Date(toDate);
       }
 
-      const jobs = await Job.find(filter).sort({ createdAt: -1 });
-      res.status(200).json({ message: "Fetched Successfully", jobs });
+      const [jobs, totalCount] = await Promise.all([
+        Job.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Job.countDocuments(filter),
+      ]);
+
+      res.status(200).json({
+        message: "Fetched Successfully",
+        jobs,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        currentPage: page,
+      });
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
   },
 );
 
-//get history
+//get specific audit
 adminRouter.get(
   "/api/admin/audit-logs/:jobId",
   userAuth,
@@ -272,6 +285,9 @@ adminRouter.get(
 adminRouter.get("/api/jobs/archived", userAuth, isAdmin, async (req, res) => {
   try {
     const { assignedToId, fromDate, toDate, clientName } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
     const filter = { isArchived: true };
     if (assignedToId) filter.assignedToId = assignedToId;
@@ -281,8 +297,18 @@ adminRouter.get("/api/jobs/archived", userAuth, isAdmin, async (req, res) => {
       if (fromDate) filter.createdAt.$gte = new Date(fromDate);
       if (toDate) filter.createdAt.$lte = new Date(toDate);
     }
-    const jobs = await Job.find(filter).sort({ createdAt: -1 });
-    res.status(200).json({ message: "Fetched Successfully", jobs });
+    const [jobs, totalCount] = await Promise.all([
+      Job.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Job.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      message: "Fetched Successfully",
+      jobs,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
