@@ -124,6 +124,44 @@ adminRouter.get("/api/admin/partners", userAuth, isAdmin, async (req, res) => {
   }
 });
 
+// admin stats
+adminRouter.get("/api/admin/jobs/stats", userAuth, isAdmin, async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.query;
+
+    const match = {}; 
+    
+    if (fromDate || toDate) {
+      match.createdAt = {};
+      if (fromDate) match.createdAt.$gte = new Date(fromDate);
+      if (toDate) {
+        const endOfDay = new Date(toDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+        match.createdAt.$lte = endOfDay;
+      }
+    }
+
+    const OPEN_STATUSES = ["Created", "Assigned", "PickedUp", "AtOffice"];
+
+    const [totalJobs, open, completed, cancelled] = await Promise.all([
+      Job.countDocuments(match),
+      Job.countDocuments({ ...match, status: { $in: OPEN_STATUSES } }),
+      Job.countDocuments({ ...match, status: "Dispatched" }),
+      Job.countDocuments({ ...match, status: "Cancelled" }),
+    ]);
+
+    res.status(200).json({
+      message: "Admin Stats Fetched Successfully",
+      totalJobs,
+      open,
+      completed,
+      cancelled,
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 //deactivate-partner
 adminRouter.patch(
   "/api/admin/partners/:id/deactivate",
@@ -217,8 +255,8 @@ adminRouter.get(
         filter.status = {
           $in: ["Created", "Assigned", "PickedUp", "AtOffice"],
         };
-      } else if (status === "Closed") {
-        filter.status = { $in: ["Dispatched", "Cancelled"] };
+      } else if (status === "Completed") {
+        filter.status = { $in: ["Dispatched"] };
       } else if (status) {
         filter.status = status;
       }

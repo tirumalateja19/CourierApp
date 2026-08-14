@@ -65,8 +65,8 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
 
     if (status === "Open") {
       filter.status = { $in: ["Created", "Assigned", "PickedUp", "AtOffice"] };
-    } else if (status === "Closed") {
-      filter.status = { $in: ["Dispatched", "Cancelled"] };
+    } else if (status === "Completed") {
+      filter.status = { $in: ["Dispatched"] };
     } else if (status) {
       filter.status = status;
     }
