@@ -15,12 +15,17 @@ const jobPhoto = new mongoose.Schema(
           "invoice",
           "packed_box",
           "item_evidence",
+          "payment_reciept",
         ],
         message: "{VALUE} is not a valid label",
       },
       required: true,
     },
     fileUrl: {
+      type: String,
+      required: true,
+    },
+    publicId: {
       type: String,
       required: true,
     },

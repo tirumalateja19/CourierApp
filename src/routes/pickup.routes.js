@@ -9,6 +9,7 @@ import { JobPhoto } from "../model/JobPhoto.model.js";
 import pdfQueue from "../queues/pdfQueue.js";
 import createAuditLog from "../utils/createAuditLog.js";
 import { PodSlip } from "../model/PodSlip.model.js";
+import cloudinary from "../config/cloudinary.js";
 const pickupRouter = Router();
 
 //add details
@@ -189,6 +190,16 @@ pickupRouter.post(
       const { id } = req.params;
       const { label } = req.body;
 
+      const job = await Job.findById(id);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (job.locked) {
+        return res
+          .status(403)
+          .json({ message: "Job is locked, cannot upload photos" });
+      }
+
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
@@ -199,6 +210,7 @@ pickupRouter.post(
         "invoice",
         "packed_box",
         "item_evidence",
+        "payment_reciept",
       ];
       if (!validLabels.includes(label)) {
         return res.status(400).json({ message: "Invalid label" });
@@ -207,10 +219,67 @@ pickupRouter.post(
       const photo = await JobPhoto.create({
         jobId: id,
         label,
-        fileUrl: req.file.path, // Cloudinary gives back the hosted URL here
+        fileUrl: req.file.path,
+        publicId: req.file.filename,
       });
 
       res.status(201).json({ message: "Photo uploaded successfully", photo });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
+//get photos
+pickupRouter.get(
+  "/api/jobs/pickup/:id/photos",
+  userAuth,
+  verifyPartnerAccess,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const photos = await JobPhoto.find({ jobId: id }).sort({ createdAt: 1 });
+      res.status(200).json({ message: "Fetched successfully", photos });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
+//delete photos
+pickupRouter.delete(
+  "/api/jobs/pickup/:id/photos/:photoId",
+  userAuth,
+  verifyPartnerAccess,
+  async (req, res) => {
+    try {
+      const { id, photoId } = req.params;
+
+      const job = await Job.findById(id);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (job.locked) {
+        return res
+          .status(403)
+          .json({ message: "Job is locked, cannot delete photos" });
+      }
+
+      const photo = await JobPhoto.findOne({ _id: photoId, jobId: id });
+      if (!photo) {
+        return res.status(404).json({ message: "Photo not found" });
+      }
+
+      if (photo.publicId) {
+        await cloudinary.uploader.destroy(photo.publicId);
+      }
+      await JobPhoto.deleteOne({ _id: photoId });
+
+      res.status(200).json({ message: "Photo deleted successfully" });
     } catch (error) {
       res
         .status(400)
