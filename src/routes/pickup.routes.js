@@ -107,6 +107,22 @@ pickupRouter.post(
   },
 );
 
+//suggest items
+pickupRouter.get(
+  "/api/jobs/pickup/items/suggestions",
+  userAuth,
+  async (req, res) => {
+    try {
+      const suggestions = await JobItem.distinct("itemName");
+      res.status(200).json({ message: "Fetched successfully", suggestions });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
 //edit items
 pickupRouter.patch(
   "/api/jobs/pickup/:id/items/:itemId",
