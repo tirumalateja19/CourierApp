@@ -60,13 +60,16 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
 jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
   try {
     const { status, assignedToId, fromDate, toDate, clientName } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
     const filter = { isArchived: { $ne: true } };
 
     if (status === "Open") {
       filter.status = { $in: ["Created", "Assigned", "PickedUp", "AtOffice"] };
-    } else if (status === "Closed") {
-      filter.status = { $in: ["Dispatched", "Cancelled"] };
+    } else if (status === "Completed") {
+      filter.status = { $in: ["Dispatched"] };
     } else if (status) {
       filter.status = status;
     }
@@ -79,8 +82,18 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
       if (toDate) filter.createdAt.$lte = new Date(toDate);
     }
 
-    const totalJobs = await Job.find(filter).sort({ createdAt: -1 });
-    res.status(200).json({ message: "Fetched Successfully", totalJobs });
+    const [totalJobs, totalCount] = await Promise.all([
+      Job.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+      Job.countDocuments(filter),
+    ]);
+
+    res.status(200).json({
+      message: "Fetched Successfully",
+      totalJobs,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+    });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
