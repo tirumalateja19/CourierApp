@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 5000;
 app.use(
   cors({
     origin: [
-      "https://courier-it.netlify.app",
+      "https://pickit-up.netlify.app/",
       "http://localhost:5173",
     ],
     credentials: true,
