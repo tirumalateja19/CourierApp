@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Merged Invoice & POD Slip</title>
+  <style>
+    /* ----------------------------------------------------
+       GLOBAL RESET & BASE
+    ---------------------------------------------------- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    @page { 
+      size: A4; 
+      margin: 0; 
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #ffffff;
+      color: #111827;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ----------------------------------------------------
+       PAGE 1: INVOICE STYLES
+    ---------------------------------------------------- */
+    .inv-container {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      overflow: hidden;
+      /* Force a page break after the invoice so POD starts on Page 2 */
+      page-break-after: always; 
+    }
+    
+    .inv-header {
+      background-color: #0f172a;
+      color: #ffffff;
+      padding: 24px 30px;
+      display: table;
+      width: 100%;
+    }
+    .inv-header-left { display: table-cell; vertical-align: middle; width: 60%; }
+    .inv-header-right { display: table-cell; vertical-align: middle; width: 40%; text-align: right; }
+    .inv-company-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .inv-company-contact { font-size: 12px; color: #cbd5e1; margin-top: 4px; }
+    .inv-document-title { font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #38bdf8; }
+    
+    .inv-section { padding: 24px 30px; border-bottom: 1px solid #f1f5f9; }
+    .inv-grid-2 { display: table; width: 100%; table-layout: fixed; }
+    .inv-col { display: table-cell; vertical-align: top; width: 50%; padding-right: 20px; }
+    .inv-col:last-child { padding-right: 0; padding-left: 20px; border-left: 1px solid #f1f5f9; }
+    
+    .inv-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; }
+    .inv-value { font-size: 14px; font-weight: 500; color: #0f172a; }
+    .inv-detail-group { margin-bottom: 16px; }
+    .inv-detail-group:last-child { margin-bottom: 0; }
+    
+    table.inv-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table.inv-table th { background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 14px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+    table.inv-table th.text-right, table.inv-table td.text-right { text-align: right; }
+    table.inv-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #1e293b; }
+    table.inv-table tr.total-row td { font-weight: 700; background-color: #f8fafc; border-top: 2px solid #e2e8f0; border-bottom: none; color: #0f172a; font-size: 14px; }
+    
+    .inv-footer-grid { display: table; width: 100%; padding: 20px 30px; background-color: #f8fafc; }
+    .inv-footer-left { display: table-cell; vertical-align: middle; width: 65%; font-size: 12px; color: #475569; }
+    .inv-footer-right { display: table-cell; vertical-align: middle; width: 35%; text-align: right; }
+    .inv-badge-total { background-color: #0f172a; color: #ffffff; padding: 10px 18px; border-radius: 6px; display: inline-block; font-size: 16px; font-weight: 700; }
+    .inv-legal-footer { padding: 14px 30px; background-color: #0f172a; color: #cbd5e1; font-size: 11px; font-weight: 600; text-align: center; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    /* ----------------------------------------------------
+       PAGE 2+: POD SLIP STYLES
+    ---------------------------------------------------- */
+    .pod-page {
+      width: 800px;
+      min-height: 1100px;
+      margin: 0 auto;
+      padding: 30px;
+      box-sizing: border-box;
+      page-break-after: always;
+    }
+    .pod-page:last-child { page-break-after: auto; }
+    
+    .pod-header { background: #1d3f8b; color: #fff; padding: 14px 20px; text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px; }
+    
+    .pod-page table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .pod-page td, .pod-page th { border: 1px solid #1d3f8b; padding: 10px; font-size: 13px; vertical-align: top; text-align: left; }
+    .pod-page th { background: #eef1fa; }
+    
+    .pod-section-title { font-size: 16px; font-weight: bold; margin: 20px 0 8px; }
+    
+    .photo-page { text-align: center; }
+    .photo-page img { max-width: 100%; max-height: 850px; border: 1px solid #1d3f8b; margin-top: 20px; }
+    .photo-caption { margin-top: 12px; font-size: 14px; font-weight: bold; }
+    
+    .packages-table td, .packages-table th { text-align: center; font-size: 12px; }
+    .packages-table .total-row td { font-weight: bold; background: #eef1fa; }
+    
+    .summary-box { margin-top: 15px; padding: 12px 16px; background: #eef1fa; border: 1px solid #1d3f8b; display: flex; justify-content: flex-end; align-items: center; font-size: 14px; font-weight: bold; }
+    .summary-box span { margin-left: 10px; color: #1d3f8b; font-size: 16px; }
+
+    /* ----------------------------------------------------
+       PRINT SPECIFIC FIXES
+    ---------------------------------------------------- */
+    @media print {
+      * { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+      }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==========================================
+       PAGE 1: AIRWAY BILL (INVOICE)
+  =========================================== -->
+  <div class="inv-container">
+    <div class="inv-header">
+      <div class="inv-header-left">
+        <div class="inv-company-title">INTERNATIONAL COURIER SERVICES</div>
+        <div class="inv-company-contact">
+          <b>CELL:</b> {{cell}} &nbsp;|&nbsp; <b>EMAIL:</b> {{email}}
+        </div>
+      </div>
+      <div class="inv-header-right">
+        <div class="inv-document-title">Airway Bill</div>
+        <div style="font-size:12px; color:#94a3b8; margin-top:2px;">Ref: <b>{{referenceNo}}</b></div>
+      </div>
+    </div>
+
+    <div class="inv-section">
+      <div class="inv-grid-2">
+        <div class="inv-col">
+          <div class="inv-label">Sender (Consignor)</div>
+          <div class="inv-detail-group">
+            <div class="inv-value">{{senderName}}</div>
+            <div style="color:#475569; margin-top:2px;">{{senderPhone}}</div>
+          </div>
+          <div class="inv-detail-group">
+            <div class="inv-label">Address</div>
+            <div style="color:#334155;">
+              {{senderAddress}}<br>
+              <b>City:</b> {{senderCity}}
+            </div>
+          </div>
+        </div>
+        <div class="inv-col">
+          <div class="inv-label">Receiver (Consignee)</div>
+          <div class="inv-detail-group">
+            <div class="inv-value">{{receiverName}}</div>
+            <div style="color:#475569; margin-top:2px;">{{receiverPhone}}</div>
+          </div>
+          <div class="inv-detail-group">
+            <div class="inv-label">Address</div>
+            <div style="color:#334155;">
+              {{receiverAddress}}<br>
+              <b>City:</b> {{receiverCity}} &nbsp;|&nbsp; <b>Zip:</b> {{receiverZipCode}}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-section">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span class="inv-label" style="margin-bottom:0;">Package Breakdown</span>
+        <span style="font-size:12px; color:#475569;">Total Packages: <b>{{packages}}</b></span>
+      </div>
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th style="width: 35%;">Package #</th>
+            <th class="text-right" style="width: 65%;">Weight (kg)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{packagesRows}}
+          <tr class="total-row">
+            <td>Total Chargeable Weight</td>
+            <td class="text-right">{{totalWeight}} kg</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="inv-footer-grid">
+      <div class="inv-footer-left">
+        <div class="inv-label">Guidelines & Handling</div>
+        <div style="color:#475569; margin-bottom: 12px;">{{guidelines}}</div>
+        <div style="font-size:11px; color:#64748b;">
+          <b>Pickup Name:</b> {{pickupName}} &nbsp;|&nbsp; <b>Staff ID:</b> {{pickupId}}
+        </div>
+      </div>
+      <div class="inv-footer-right">
+        <div class="inv-label" style="margin-bottom:6px;">Total Charges</div>
+        <div class="inv-badge-total">{{total}}</div>
+      </div>
+    </div>
+
+    <div class="inv-legal-footer">
+      Non-Negotiable Consignment Note
+    </div>
+  </div>
+
+  <!-- ==========================================
+       PAGE 2: POD SLIP (Sender & Receiver Details)
+  =========================================== -->
+  <div class="pod-page">
+    <div class="pod-header">POD SLIP — JOB REF: {{jobId}}</div>
+
+    <div class="pod-section-title">Sender (Consignor)</div>
+    <table>
+      <tr>
+        <th style="width:180px;">Name</th>
+        <td>{{senderName}}</td>
+      </tr>
+      <tr>
+        <th>Address</th>
+        <td>{{senderAddress}}</td>
+      </tr>
+      <tr>
+        <th>City</th>
+        <td>{{senderCity}}</td>
+      </tr>
+      <tr>
+        <th>Contact No.</th>
+        <td>{{senderPhone}}</td>
+      </tr>
+    </table>
+
+    <div class="pod-section-title">Receiver (Consignee)</div>
+    <table>
+      <tr>
+        <th style="width:180px;">Name</th>
+        <td>{{receiverName}}</td>
+      </tr>
+      <tr>
+        <th>Address</th>
+        <td>{{receiverAddress}}</td>
+      </tr>
+      <tr>
+        <th>City</th>
+        <td>{{receiverCity}}</td>
+      </tr>
+      <tr>
+        <th>Zip Code</th>
+        <td>{{receiverZipCode}}</td>
+      </tr>
+      <tr>
+        <th>Contact No.</th>
+        <td>{{receiverPhone}}</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ==========================================
+       PAGE 3: POD SLIP (Items & Weight)
+  =========================================== -->
+  <div class="pod-page">
+    <div class="pod-header">ITEMS & PACKAGE DETAILS</div>
+
+    <div class="pod-section-title">Item List</div>
+    <table>
+      <tr>
+        <th>Item Name</th>
+        <th style="width:100px;">Quantity</th>
+        <th style="width:100px;">Fragile</th>
+      </tr>
+      {{itemRows}}
+    </table>
+
+    <div class="pod-section-title">Package Details (No. of Packages: {{numberOfPackages}})</div>
+    <table class="packages-table">
+      <tr>
+        <th>#</th>
+        <th>Weight</th>
+      </tr>
+      {{packagesRows}}
+      <tr class="total-row">
+        <td>Total</td>
+        <td>{{totalWeight}}</td>
+      </tr>
+    </table>
+    <div class="summary-box">
+      Total Charges: <span>{{total}}</span>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       PAGE 4+: PHOTOS (One per page)
+  =========================================== -->
+  {{photoPages}}
+
+</body>
+</html>

@@ -102,7 +102,6 @@ const jobs = new mongoose.Schema(
     receiverNumber: {
       type: String,
       trim: true,
-      maxLength: 10,
     },
     price: {
       type: String,

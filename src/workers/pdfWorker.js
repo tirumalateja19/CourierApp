@@ -117,24 +117,31 @@ const pdfWorker = new Worker(
       const displayTotal = hasValidPrice ? `₹ ${jobData.price}` : "PENDING";
 
       const html = renderTemplate(
-        path.resolve("uploads/templates/podslip_template.html"),
+        path.resolve("uploads/templates/template.html"),
         {
           jobId,
-          clientName: jobData.clientName,
-          clientAddress: jobData.clientAddress,
-          clientCity: jobData.clientCity,
-          clientNumber: jobData.clientNumber,
+          senderName: jobData.clientName,
+          senderAddress: jobData.clientAddress,
+          senderCity: jobData.clientCity,
+          senderPhone: jobData.clientNumber,
           receiverName: jobData.receiverName,
           receiverAddress: jobData.receiverAddress,
           receiverCity: jobData.receiverCity,
           receiverZipCode: jobData.receiverZipCode,
-          receiverNumber: jobData.receiverNumber,
+          receiverPhone: jobData.receiverNumber,
           itemRows,
           packagesRows,
           totalWeight,
           numberOfPackages: jobData.numberOfPackages,
+          packages: jobData.numberOfPackages,
           photoPages,
           total: displayTotal,
+          cell: process.env.CELL,
+          email: process.env.EMAIL,
+          guidelines: process.env.HANDLING_GUIDELINES,
+          referenceNo: jobId,
+          pickupName: generatedByUsername,
+          pickupId: generatedById,
         },
       );
 
