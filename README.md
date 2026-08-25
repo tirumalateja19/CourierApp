@@ -2,6 +2,10 @@
 
 A MERN-stack courier management system backend built with Node.js, Express, and MongoDB. Supports two user roles (Admin and Partner) with full job lifecycle management — from job creation through pickup, PDF generation, and dispatch.
 
+Login Credentials : 
+UserName - Tester 
+pass - Asdf@001
+
 > Note: project name is a placeholder for now, will be updated later.
 
 ## Tech Stack
