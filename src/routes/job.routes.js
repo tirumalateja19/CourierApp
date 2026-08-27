@@ -359,15 +359,28 @@ jobRouter.get(
         return res.status(400).send("Invalid job id");
       }
 
+      const jobData = await Job.findById(id).select("podSlipStatus");
+      if (!jobData) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
       const podSlip = await PodSlip.findOne({ jobId: id }).sort({
         createdAt: -1,
       });
 
       if (!podSlip) {
-        return res.status(404).json({ message: "Pod slip not generated yet" });
+        return res.status(200).json({
+          message: "Pod slip not generated yet",
+          podSlipStatus: jobData.podSlipStatus,
+          podSlip: null,
+        });
       }
 
-      res.status(200).json({ message: "Pod slip fetched", podSlip });
+      res.status(200).json({
+        message: "Pod slip fetched",
+        podSlipStatus: jobData.podSlipStatus,
+        podSlip,
+      });
     } catch (error) {
       res
         .status(400)
@@ -397,18 +410,9 @@ jobRouter.post("/api/jobs/:id/submit", userAuth, isAdmin, async (req, res) => {
         .json({ message: "Please add receiver details before proceeding" });
     }
 
-    const existingPodSlip = await PodSlip.findOne({ jobId: id }).sort({
-      createdAt: -1,
-    });
-
-    if (existingPodSlip && jobData.updatedAt <= existingPodSlip.createdAt) {
-      return res
-        .status(400)
-        .json({ message: "No changes detected since last generation" });
-    }
-
     await Job.findByIdAndUpdate(id, {
       status: "AtOffice",
+      podSlipStatus: "pending",
     });
 
     await pdfQueue.add(

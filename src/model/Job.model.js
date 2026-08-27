@@ -119,6 +119,11 @@ const jobs = new mongoose.Schema(
     podGeneratedBy: {
       type: String,
     },
+    podSlipStatus: {
+      type: String,
+      enum: ["idle", "pending", "ready", "failed"],
+      default: "idle",
+    },
     locked: {
       type: Boolean,
       default: false,

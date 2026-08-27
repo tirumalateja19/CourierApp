@@ -79,7 +79,45 @@ const pdfWorker = new Worker(
       const jobData = await Job.findById(jobId);
       if (!jobData) throw new Error("Job not found");
 
-      const items = await JobItem.find({ jobId });
+      const items = await JobItem.find({ jobId }).sort({ createdAt: 1 });
+      const photos = await JobPhoto.find({ jobId }).sort({ createdAt: 1 });
+
+      const sourceData = {
+        receiverName: jobData.receiverName,
+        receiverAddress: jobData.receiverAddress,
+        receiverCity: jobData.receiverCity,
+        receiverZipCode: jobData.receiverZipCode,
+        receiverNumber: jobData.receiverNumber,
+        price: jobData.price,
+        packages: jobData.packages,
+        numberOfPackages: jobData.numberOfPackages,
+        items: items.map((i) => ({
+          name: i.itemName,
+          qty: i.quantity,
+          fragile: i.fragile,
+        })),
+        photoIds: photos.map((p) => p._id.toString()),
+      };
+
+      const sourceHash = crypto
+        .createHash("sha256")
+        .update(JSON.stringify(sourceData))
+        .digest("hex");
+
+      const existingPodSlip = await PodSlip.findOne({ jobId }).sort({
+        createdAt: -1,
+      });
+
+      if (existingPodSlip && existingPodSlip.sourceHash === sourceHash) {
+        await Job.findByIdAndUpdate(jobId, {
+          podSlipStatus: "unchanged",
+        });
+        console.log(
+          `[pdfWorker] No content change for job ${jobId}, skipping regeneration`,
+        );
+        return;
+      }
+
       const { rows: packagesRows, totalWeight } = buildPackagesRows(
         jobData.packages,
       );
@@ -96,7 +134,6 @@ const pdfWorker = new Worker(
         )
         .join("");
 
-      const photos = await JobPhoto.find({ jobId });
       const photoPages = photos
         .map(
           (photo) => `
@@ -145,22 +182,34 @@ const pdfWorker = new Worker(
         },
       );
 
-      const browser = await launchBrowser();
-      const page = await browser.newPage();
-      await page.setViewport({ width: 900, height: 1200 });
-      await page.setContent(html, { waitUntil: "networkidle0" });
-      const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-      await browser.close();
+      let pdfBuffer;
+      try {
+        const browser = await launchBrowser();
+        const page = await browser.newPage();
+        await page.setViewport({ width: 900, height: 1200 });
+        await page.setContent(html, { waitUntil: "networkidle0" });
+        pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
+        await browser.close();
+      } catch (err) {
+        await Job.findByIdAndUpdate(jobId, { podSlipStatus: "failed" });
+        throw err;
+      }
 
       const pdfHash = crypto
         .createHash("sha256")
         .update(pdfBuffer)
         .digest("hex");
 
-      const uploadResult = await uploadPdfToCloudinary(
-        pdfBuffer,
-        "pickitup/podslips",
-      );
+      let uploadResult;
+      try {
+        uploadResult = await uploadPdfToCloudinary(
+          pdfBuffer,
+          "pickitup/podslips",
+        );
+      } catch (err) {
+        await Job.findByIdAndUpdate(jobId, { podSlipStatus: "failed" });
+        throw err;
+      }
 
       await PodSlip.findOneAndUpdate(
         { jobId },
@@ -169,6 +218,7 @@ const pdfWorker = new Worker(
           generatedById,
           pdfUrl: uploadResult.secure_url,
           pdfHash,
+          sourceHash,
         },
         { upsert: true, returnDocument: "after" },
       );
@@ -176,6 +226,7 @@ const pdfWorker = new Worker(
       await Job.findByIdAndUpdate(jobId, {
         podSlipGenerated: true,
         podGeneratedBy: generatedByUsername,
+        podSlipStatus: "ready",
       });
 
       createAuditLog({

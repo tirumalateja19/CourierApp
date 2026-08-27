@@ -19,6 +19,10 @@ const podSlip = new mongoose.Schema(
       type: String,
       required: true,
     },
+    sourceHash: {
+      type: String,
+      required: true,
+    },
     version: {
       type: Number,
       default: 1,

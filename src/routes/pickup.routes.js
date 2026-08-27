@@ -329,18 +329,9 @@ pickupRouter.post(
           .json({ message: "Please add receiver details before proceeding" });
       }
 
-      const existingPodSlip = await PodSlip.findOne({ jobId: id }).sort({
-        createdAt: -1,
-      });
-
-      if (existingPodSlip && jobData.updatedAt <= existingPodSlip.createdAt) {
-        return res
-          .status(400)
-          .json({ message: "No changes detected since last generation" });
-      }
-
       await Job.findByIdAndUpdate(id, {
         status: "AtOffice",
+        podSlipStatus: "pending",
       });
 
       await pdfQueue.add(
