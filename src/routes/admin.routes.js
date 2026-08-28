@@ -107,7 +107,7 @@ adminRouter.post(
         contactNumber: contactNumber,
       });
       await admin.save();
-      res.status(201).send("Admin created");
+      res.status(201).json({ message: "Admin created" });
     } catch (err) {
       res.status(400).json({ message: err.message });
     }

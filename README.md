@@ -1,12 +1,6 @@
-# Courier App — Backend
+# PickItUp Courier App — Backend
 
 A MERN-stack courier management system backend built with Node.js, Express, and MongoDB. Supports two user roles (Admin and Partner) with full job lifecycle management — from job creation through pickup, PDF generation, and dispatch.
-
-Login Credentials : 
-UserName - Tester 
-pass - Asdf@001
-
-> Note: project name is a placeholder for now, will be updated later.
 
 ## Tech Stack
 
@@ -24,13 +18,13 @@ pass - Asdf@001
 - Two roles — **Admin** and **Partner** — each with separate login endpoints, stored in separate Mongoose models.
 - Role identity is carried in the JWT payload (`role: "admin" | "partner"`), not stored redundantly on documents.
 - Heavy/slow work (PDF generation) is offloaded to a BullMQ queue + worker, decoupled from the request/response cycle — routes enqueue jobs and respond immediately; the worker processes them in the background using Puppeteer + Cloudinary.
-- Every meaningful state change (job created, assigned, locked/unlocked, dispatched, PDFs generated, partner deactivated/activated) is recorded in an append-only `AuditLog` collection for traceability and dispute resolution.
+- Every meaningful state change (job created, assigned, locked/unlocked, dispatched, pod slip generated, partner deactivated/activated, items/photos edited) is recorded in an append-only `AuditLog` collection for traceability and dispute resolution.
 
 ## Project Structure
 
 ```
 src/
-├── config/          # DB, Redis, Cloudinary connection setup
+├── config/          # DB, Redis, Cloudinary, Multer/Cloudinary storage setup
 ├── middleware/       # Auth, role guards, lock/assignment checks
 ├── model/             # Mongoose schemas
 ├── routes/           # Express route definitions
@@ -40,11 +34,15 @@ src/
 └── index.js           # App entry point
 
 uploads/
-└── templates/         # HTML templates used for PDF generation (invoice, pod-slip)
+└── templates/         # HTML template used for PDF generation (pod-slip)
 
 scripts/
 └── seedAdmin.js        # One-off script to seed the first admin account
 ```
+
+## Architecture Notes
+
+<img width="994" height="1496" alt="image" src="https://github.com/user-attachments/assets/4238e1f5-3d57-4c12-a19a-83f37c3a7315" />
 
 ## Data Models
 
@@ -54,9 +52,8 @@ scripts/
 | `Partner` | Delivery partner accounts, includes `isDeactivated` flag |
 | `Job` | Core courier job — client & receiver details, weight/dimensions, status, lock state |
 | `JobItem` | Individual items within a job's package |
-| `JobPhoto` | Labelled photos (id proof, waybill, packed box, etc.) tied to a job |
-| `ClientInvoice` | Generated invoice PDF metadata |
-| `PodSlip` | Generated proof-of-delivery PDF metadata, includes SHA-256 hash |
+| `JobPhoto` | Labelled photos (id proof, waybill, packed box, invoice, item evidence, payment receipt) tied to a job, includes Cloudinary `publicId` for deletion |
+| `PodSlip` | Generated proof-of-delivery PDF metadata, includes SHA-256 hash (`pdfHash`) for future dedup use |
 | `Shipment` | Carrier/tracking info once a job is dispatched |
 | `AuditLog` | Append-only event log for every significant action |
 
@@ -73,27 +70,32 @@ scripts/
 
 1. **Admin creates a job** (`POST /api/jobs/new-job`)
 2. **Admin assigns it** to a partner, or self-assigns
-3. **Partner (or admin) fills in details** as they go — receiver info, weight, dimensions, items, photos — all save-as-you-go via PATCH/POST routes
-4. **Partner submits** (`POST /api/jobs/:id/submit`) — if weight & price are present, triggers both invoice and pod-slip PDF generation in the background
-   - If price/weight is missing, partner instead calls `/defer-invoice`, which generates only the pod-slip; admin completes the invoice later via `POST /api/jobs/:id/invoice`
+3. **Partner (or admin) fills in details** as they go — receiver info, price, weight, dimensions, items, photos — all save-as-you-go via PATCH/POST routes
+4. **Partner (or admin) submits** (`POST /api/jobs/pickup/:id/submit`) — requires receiver details to be present; enqueues a single `generate-pod-slip` job, which renders the pod slip as page 1 followed by each uploaded photo as its own page
 5. **Admin records shipment** (`POST /api/jobs/:id/shipment`) — logs carrier/tracking info, marks job dispatched
-6. Job can be **manually locked/unlocked** by admin at any point (with reason tracking); locking blocks partner edits but never blocks admin
+6. Job can be **manually locked/unlocked** by admin at any point (with reason tracking); locking blocks partner edits (details, items, photo upload/delete) but never blocks admin
 
 ## PDF Generation Pipeline
 
-1. Route enqueues a typed job (`generate-invoice` / `generate-pod-slip`) into a single BullMQ queue, passing only the data needed (job id, actor info)
-2. Worker picks up the job, fetches full job data (+ items/photos for pod-slip) from MongoDB
+1. `/submit` route enqueues a `generate-pod-slip` job into a single BullMQ queue (fixed `jobId: pod-slip-${id}`, `removeOnFail: true` — prevents duplicate jobs on repeat clicks while allowing retries after failure), passing only the data needed (job id, actor info)
+2. Worker picks up the job, fetches full job data + items + photos for that job from MongoDB
 3. Data is injected into a static HTML template
-4. Puppeteer renders the HTML to a PDF buffer
+4. Puppeteer renders the HTML to a PDF buffer (pod slip page first, followed by one page per uploaded photo)
 5. Buffer is uploaded to Cloudinary (raw resource type, `.pdf` extension baked into the public ID)
-6. Resulting URL + metadata saved to `ClientInvoice` / `PodSlip`
-7. An audit log entry (`pdfGenerated`, actor role `system`) is recorded
+6. Resulting URL + SHA-256 hash saved to `PodSlip` (upserted per job)
+7. An audit log entry (`podSlipGenerated`) is recorded
 
-Typical generation time: well within 30 seconds per job.
+On Render, the worker launches Chromium via `@sparticuz/chromium` + `puppeteer-core` (detected via `RENDER=true`); locally it dynamically imports standard `puppeteer` to avoid module resolution issues.
 
-## Known Quirks
+Typical generation time is well within 30 seconds, though first-request cold starts on Render's free tier can add noticeable delay.
 
-- Cloudinary `raw`-type PDF URLs sometimes fail to preview inline in Chrome's built-in PDF viewer (shows "Failed to load PDF document") even though the file is completely valid — confirmed downloadable and correct via Cloudinary's own dashboard. This does not affect proper download flows (`<a download>`, blob fetch) that the frontend will use.
+## Item Name Suggestions
+
+`GET /api/jobs/pickup/items/suggestions` returns all distinct `itemName` values ever recorded (`JobItem.distinct("itemName")`). Given the expected ceiling of a few hundred unique item names, the frontend fetches this list once per form load and filters it client-side as the user types, rather than querying on every keystroke.
+
+## Job List Pagination
+
+`GET /api/jobs` (admin job list) supports `page` and `limit` query params alongside existing filters (`status`, `assignedToId`, `clientName`, `fromDate`, `toDate`). Response includes `totalJobs` (the page's results — name kept for frontend compatibility), `totalCount`, `totalPages`, and `currentPage`. The count query runs in parallel with the paginated find via `Promise.all`.
 
 ## Environment Variables
 
@@ -105,10 +107,15 @@ REDIS_URL=
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
+RENDER=
 ```
 
 ## Not Yet Built
 
-- Socket.IO real-time notifications (PDF-ready events) — deferred until frontend is further along
+- Socket.IO real-time notifications (pod-slip-ready events) — deferred until frontend is further along
 - BullMQ scheduled auto-lock job (`jobAutoLocked`) — manual lock/unlock exists, automatic time-based locking does not yet
-- `pdfRegenerated` audit action — reserved for a future "regenerate after correction" flow, not yet triggered anywhere
+- Force-regenerate — admin bypass for the staleness check (comparing `Job.updatedAt` vs. latest `PodSlip.createdAt`) that currently blocks regeneration when no changes have occurred
+- `pdfHash` dedup — field exists on `PodSlip`, not yet used to prevent redundant regeneration
+- Auto-archive delay for cancelled jobs
+- Google OAuth
+- CSV import/export
