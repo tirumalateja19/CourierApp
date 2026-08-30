@@ -53,7 +53,7 @@ partnerRouter.post("/api/partner/login", async (req, res) => {
 //partner-jobs
 partnerRouter.get("/api/partner/jobs", userAuth, async (req, res) => {
   try {
-    const { status, fromDate, toDate } = req.query;
+    const { status, fromDate, toDate, clientName } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -67,6 +67,8 @@ partnerRouter.get("/api/partner/jobs", userAuth, async (req, res) => {
     } else if (status) {
       filter.status = status;
     }
+
+    if (clientName) filter.clientName = { $regex: clientName, $options: "i" };
 
     if (fromDate || toDate) {
       filter.createdAt = {};
