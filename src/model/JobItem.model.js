@@ -18,9 +18,14 @@ const jobItem = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: true,
     },
+    packageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
+    },
   },
   {
     timestamps: true,
   },
 );
+jobItem.index({ jobId: 1, packageId: 1 });
 export const JobItem = mongoose.model("JobItem", jobItem);

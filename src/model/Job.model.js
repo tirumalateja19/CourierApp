@@ -69,10 +69,13 @@ const jobs = new mongoose.Schema(
     },
     packages: [
       {
-        weight: Number,
-        length: Number,
-        breadth: Number,
-        height: Number,
+        unit: { type: String, enum: ["cm", "in"], default: "cm" },
+        actualWeight: { type: Number, default: 0 },
+        length: { type: Number, default: 0 },
+        breadth: { type: Number, default: 0 },
+        height: { type: Number, default: 0 },
+        volWeight: { type: Number, default: 0 },
+        weight: { type: Number, default: 0 },
       },
     ],
     numberOfPackages: {

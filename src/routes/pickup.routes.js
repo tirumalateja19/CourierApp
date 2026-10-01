@@ -10,7 +10,27 @@ import pdfQueue from "../queues/pdfQueue.js";
 import createAuditLog from "../utils/createAuditLog.js";
 import { PodSlip } from "../model/PodSlip.model.js";
 import cloudinary from "../config/cloudinary.js";
+import { calcBox, calcTotals, MAX_PACKAGES } from "../utils/weight.js";
 const pickupRouter = Router();
+
+//calculate
+pickupRouter.post("/api/jobs/pickup/weight/calculate", userAuth, (req, res) => {
+  try {
+    const { packages } = req.body ?? {};
+
+    if (!Array.isArray(packages) || packages.length === 0)
+      return res.status(400).json({ message: "Send at least one box" });
+    if (packages.length > MAX_PACKAGES)
+      return res.status(400).json({ message: `Maximum ${MAX_PACKAGES} boxes` });
+
+    const boxes = packages.map(calcBox);
+    res.status(200).json({ packages: boxes, ...calcTotals(boxes) });
+  } catch (error) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+});
 
 //add details
 pickupRouter.patch(
@@ -27,27 +47,22 @@ pickupRouter.patch(
         receiverName,
         receiverNumber,
         receiverAddress,
-        packages,
         packingStatus,
         status,
         price,
-        numberOfPackages,
         receiverCity,
         receiverZipCode,
         receiverCountry,
-      } = req.body;
+      } = req.body ?? {};
 
       const updates = {};
       if (receiverName !== undefined) updates.receiverName = receiverName;
       if (receiverNumber !== undefined) updates.receiverNumber = receiverNumber;
       if (receiverAddress !== undefined)
         updates.receiverAddress = receiverAddress;
-      if (packages !== undefined) updates.packages = packages;
       if (price !== undefined) updates.price = price;
       if (packingStatus !== undefined) updates.packingStatus = packingStatus;
       if (status !== undefined) updates.status = status;
-      if (numberOfPackages !== undefined)
-        updates.numberOfPackages = numberOfPackages;
       if (receiverCity !== undefined) updates.receiverCity = receiverCity;
       if (receiverZipCode !== undefined)
         updates.receiverZipCode = receiverZipCode;
@@ -63,6 +78,97 @@ pickupRouter.patch(
         return res.status(404).json({ message: "Job not found" });
       }
       res.status(200).json({ message: "Details added!!", jobData });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
+//save boxes
+pickupRouter.put(
+  "/api/jobs/pickup/:id/packages",
+  userAuth,
+  verifyPartnerAccess,
+  async (req, res) => {
+    try {
+      const job = req.job;
+      const { packages, packingStatus, price } = req.body;
+
+      if (
+        !Array.isArray(packages) ||
+        packages.length < 1 ||
+        packages.length > MAX_PACKAGES
+      )
+        return res
+          .status(400)
+          .json({ message: `1 to ${MAX_PACKAGES} boxes required` });
+
+      const cleanPackages = [];
+      const itemDocs = [];
+
+      for (const p of packages) {
+        const _id = mongoose.isValidObjectId(p._id)
+          ? p._id
+          : new mongoose.Types.ObjectId();
+        const box = calcBox(p);
+
+        if (box.actualWeight <= 0 || !box.length || !box.breadth || !box.height)
+          return res
+            .status(400)
+            .json({ message: "Every box needs weight and dimensions" });
+
+        if (!Array.isArray(p.items) || p.items.length === 0)
+          return res
+            .status(400)
+            .json({ message: "Every box needs at least one item" });
+
+        cleanPackages.push({ _id, ...box });
+
+        const seenNames = new Set();
+
+        for (const it of p.items) {
+          const quantity = Number(it.quantity);
+          if (
+            !it.itemName?.trim() ||
+            !Number.isInteger(quantity) ||
+            quantity < 1
+          )
+            return res.status(400).json({ message: "Invalid item" });
+
+          const nameKey = it.itemName.trim().toLowerCase().replace(/\s+/g, " ");
+          if (seenNames.has(nameKey))
+            return res.status(400).json({
+              message: `"${it.itemName.trim()}" is listed more than once in a box`,
+            });
+          seenNames.add(nameKey);
+
+          itemDocs.push({
+            itemName: it.itemName.trim(),
+            quantity,
+            fragile: !!it.fragile,
+            jobId: job._id,
+            packageId: _id,
+          });
+        }
+      }
+
+      job.packages = cleanPackages;
+      job.numberOfPackages = String(cleanPackages.length);
+      if (packingStatus !== undefined) job.packingStatus = packingStatus;
+      if (price !== undefined) job.price = String(price);
+      await job.save();
+
+      await JobItem.deleteMany({ jobId: job._id });
+      const items = await JobItem.insertMany(itemDocs);
+
+      res.status(200).json({
+        message: "Package info saved",
+        jobData: job,
+        items,
+        ...calcTotals(cleanPackages),
+      });
     } catch (error) {
       res
         .status(400)
