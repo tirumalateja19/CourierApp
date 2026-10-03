@@ -1,19 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <title>Merged Invoice & POD Slip</title>
+  <title>Package Reciept</title>
   <style>
-    /* ----------------------------------------------------
-       GLOBAL RESET & BASE
-    ---------------------------------------------------- */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    
-    @page { 
-      size: A4; 
-      margin: 0; 
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-    
+
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
     body {
       margin: 0;
       padding: 0;
@@ -34,9 +36,9 @@
       background: #ffffff;
       overflow: hidden;
       /* Force a page break after the invoice so POD starts on Page 2 */
-      page-break-after: always; 
+      page-break-after: always;
     }
-    
+
     .inv-header {
       background-color: #0f172a;
       color: #ffffff;
@@ -44,33 +46,168 @@
       display: table;
       width: 100%;
     }
-    .inv-header-left { display: table-cell; vertical-align: middle; width: 60%; }
-    .inv-header-right { display: table-cell; vertical-align: middle; width: 40%; text-align: right; }
-    .inv-company-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-    .inv-company-contact { font-size: 12px; color: #cbd5e1; margin-top: 4px; }
-    .inv-document-title { font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #38bdf8; }
-    
-    .inv-section { padding: 24px 30px; border-bottom: 1px solid #f1f5f9; }
-    .inv-grid-2 { display: table; width: 100%; table-layout: fixed; }
-    .inv-col { display: table-cell; vertical-align: top; width: 50%; padding-right: 20px; }
-    .inv-col:last-child { padding-right: 0; padding-left: 20px; border-left: 1px solid #f1f5f9; }
-    
-    .inv-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 4px; }
-    .inv-value { font-size: 14px; font-weight: 500; color: #0f172a; }
-    .inv-detail-group { margin-bottom: 16px; }
-    .inv-detail-group:last-child { margin-bottom: 0; }
-    
-    table.inv-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    table.inv-table th { background-color: #f8fafc; color: #475569; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 14px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-    table.inv-table th.text-right, table.inv-table td.text-right { text-align: right; }
-    table.inv-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #1e293b; }
-    table.inv-table tr.total-row td { font-weight: 700; background-color: #f8fafc; border-top: 2px solid #e2e8f0; border-bottom: none; color: #0f172a; font-size: 14px; }
-    
-    .inv-footer-grid { display: table; width: 100%; padding: 20px 30px; background-color: #f8fafc; }
-    .inv-footer-left { display: table-cell; vertical-align: middle; width: 65%; font-size: 12px; color: #475569; }
-    .inv-footer-right { display: table-cell; vertical-align: middle; width: 35%; text-align: right; }
-    .inv-badge-total { background-color: #0f172a; color: #ffffff; padding: 10px 18px; border-radius: 6px; display: inline-block; font-size: 16px; font-weight: 700; }
-    .inv-legal-footer { padding: 14px 30px; background-color: #0f172a; color: #cbd5e1; font-size: 11px; font-weight: 600; text-align: center; letter-spacing: 0.08em; text-transform: uppercase; }
+
+    .inv-header-left {
+      display: table-cell;
+      vertical-align: middle;
+      width: 60%;
+    }
+
+    .inv-header-right {
+      display: table-cell;
+      vertical-align: middle;
+      width: 40%;
+      text-align: right;
+    }
+
+    .inv-company-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .inv-company-contact {
+      font-size: 12px;
+      color: #cbd5e1;
+      margin-top: 4px;
+    }
+
+    .inv-document-title {
+      font-size: 16px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #38bdf8;
+    }
+
+    .inv-section {
+      padding: 24px 30px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .inv-grid-2 {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
+    }
+
+    .inv-col {
+      display: table-cell;
+      vertical-align: top;
+      width: 50%;
+      padding-right: 20px;
+    }
+
+    .inv-col:last-child {
+      padding-right: 0;
+      padding-left: 20px;
+      border-left: 1px solid #f1f5f9;
+    }
+
+    .inv-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 4px;
+    }
+
+    .inv-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: #0f172a;
+    }
+
+    .inv-detail-group {
+      margin-bottom: 16px;
+    }
+
+    .inv-detail-group:last-child {
+      margin-bottom: 0;
+    }
+
+    table.inv-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    table.inv-table th {
+      background-color: #f8fafc;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 10px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    table.inv-table th.text-right,
+    table.inv-table td.text-right {
+      text-align: right;
+    }
+
+    table.inv-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+      color: #1e293b;
+    }
+
+    table.inv-table tr.total-row td {
+      font-weight: 700;
+      background-color: #f8fafc;
+      border-top: 2px solid #e2e8f0;
+      border-bottom: none;
+      color: #0f172a;
+      font-size: 14px;
+    }
+
+    .inv-footer-grid {
+      display: table;
+      width: 100%;
+      padding: 20px 30px;
+      background-color: #f8fafc;
+    }
+
+    .inv-footer-left {
+      display: table-cell;
+      vertical-align: middle;
+      width: 65%;
+      font-size: 12px;
+      color: #475569;
+    }
+
+    .inv-footer-right {
+      display: table-cell;
+      vertical-align: middle;
+      width: 35%;
+      text-align: right;
+    }
+
+    .inv-badge-total {
+      background-color: #0f172a;
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 6px;
+      display: inline-block;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .inv-legal-footer {
+      padding: 14px 30px;
+      background-color: #0f172a;
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
 
     /* ----------------------------------------------------
        PAGE 2+: POD SLIP STYLES
@@ -83,38 +220,127 @@
       box-sizing: border-box;
       page-break-after: always;
     }
-    .pod-page:last-child { page-break-after: auto; }
-    
-    .pod-header { background: #1d3f8b; color: #fff; padding: 14px 20px; text-align: center; font-size: 20px; font-weight: bold; margin-bottom: 20px; }
-    
-    .pod-page table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .pod-page td, .pod-page th { border: 1px solid #1d3f8b; padding: 10px; font-size: 13px; vertical-align: top; text-align: left; }
-    .pod-page th { background: #eef1fa; }
-    
-    .pod-section-title { font-size: 16px; font-weight: bold; margin: 20px 0 8px; }
-    
-    .photo-page { text-align: center; }
-    .photo-page img { max-width: 100%; max-height: 850px; border: 1px solid #1d3f8b; margin-top: 20px; }
-    .photo-caption { margin-top: 12px; font-size: 14px; font-weight: bold; }
-    
-    .packages-table td, .packages-table th { text-align: center; font-size: 12px; }
-    .packages-table .total-row td { font-weight: bold; background: #eef1fa; }
-    
-    .summary-box { margin-top: 15px; padding: 12px 16px; background: #eef1fa; border: 1px solid #1d3f8b; display: flex; justify-content: flex-end; align-items: center; font-size: 14px; font-weight: bold; }
-    .summary-box span { margin-left: 10px; color: #1d3f8b; font-size: 16px; }
+
+    .pod-page:last-child {
+      page-break-after: auto;
+    }
+
+    .pod-header {
+      background: #1d3f8b;
+      color: #fff;
+      padding: 14px 20px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .pod-page table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .pod-page td,
+    .pod-page th {
+      border: 1px solid #1d3f8b;
+      padding: 10px;
+      font-size: 13px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .pod-page th {
+      background: #eef1fa;
+    }
+
+    .pod-section-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 20px 0 8px;
+    }
+
+    .photo-page {
+      text-align: center;
+    }
+
+    .photo-page img {
+      max-width: 100%;
+      max-height: 850px;
+      border: 1px solid #1d3f8b;
+      margin-top: 20px;
+    }
+
+    .photo-caption {
+      margin-top: 12px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .summary-box {
+      margin-top: 15px;
+      padding: 12px 16px;
+      background: #eef1fa;
+      border: 1px solid #1d3f8b;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    .summary-box span {
+      margin-left: 10px;
+      color: #1d3f8b;
+      font-size: 16px;
+    }
+
+    /* ----------------------------------------------------
+       BOX-WISE ITEMS (PAGE 3)
+    ---------------------------------------------------- */
+    .box-block {
+      margin-top: 16px;
+      page-break-inside: avoid;
+    }
+
+    .box-block table {
+      margin-top: 0;
+    }
+
+    .box-title {
+      background: #1d3f8b;
+      color: #fff;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .box-weights {
+      padding: 6px 12px;
+      background: #eef1fa;
+      border: 1px solid #1d3f8b;
+      border-top: none;
+      font-size: 12px;
+    }
 
     /* ----------------------------------------------------
        PRINT SPECIFIC FIXES
     ---------------------------------------------------- */
     @media print {
-      * { 
-        -webkit-print-color-adjust: exact !important; 
-        print-color-adjust: exact !important; 
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
       }
-      body { padding: 0; }
+
+      body {
+        padding: 0;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <!-- ==========================================
@@ -175,14 +401,17 @@
       <table class="inv-table">
         <thead>
           <tr>
-            <th style="width: 35%;">Package #</th>
-            <th class="text-right" style="width: 65%;">Weight (kg)</th>
+            <th style="width: 14%;">Box</th>
+            <th style="width: 34%;">Dimensions</th>
+            <th class="text-right">Actual (kg)</th>
+            <th class="text-right">Vol. (kg)</th>
+            <th class="text-right">Charge (kg)</th>
           </tr>
         </thead>
         <tbody>
           {{packagesRows}}
           <tr class="total-row">
-            <td>Total Chargeable Weight</td>
+            <td colspan="4">Total Chargeable Weight</td>
             <td class="text-right">{{totalWeight}} kg</td>
           </tr>
         </tbody>
@@ -260,33 +489,18 @@
   </div>
 
   <!-- ==========================================
-       PAGE 3: POD SLIP (Items & Weight)
+       PAGE 3: POD SLIP (Box-wise Items & Weight)
   =========================================== -->
   <div class="pod-page">
     <div class="pod-header">ITEMS & PACKAGE DETAILS</div>
 
-    <div class="pod-section-title">Item List</div>
-    <table>
-      <tr>
-        <th>Item Name</th>
-        <th style="width:100px;">Quantity</th>
-        <th style="width:100px;">Fragile</th>
-      </tr>
-      {{itemRows}}
-    </table>
+    <div class="pod-section-title">Boxes (No. of Packages: {{numberOfPackages}})</div>
 
-    <div class="pod-section-title">Package Details (No. of Packages: {{numberOfPackages}})</div>
-    <table class="packages-table">
-      <tr>
-        <th>#</th>
-        <th>Weight</th>
-      </tr>
-      {{packagesRows}}
-      <tr class="total-row">
-        <td>Total</td>
-        <td>{{totalWeight}}</td>
-      </tr>
-    </table>
+    {{boxSections}}
+
+    <div class="summary-box">
+      Total Chargeable Weight: <span>{{totalWeight}} kg</span>
+    </div>
     <div class="summary-box">
       Total Charges: <span>{{total}}</span>
     </div>
@@ -298,4 +512,5 @@
   {{photoPages}}
 
 </body>
+
 </html>

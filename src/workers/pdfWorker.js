@@ -29,22 +29,92 @@ const uploadPdfToCloudinary = (buffer, folder) => {
   });
 };
 
-const buildPackagesRows = (packages) => {
-  let totalWeight = 0;
+const escapeHtml = (s) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
+// Old jobs have no actualWeight/volWeight, so show a dash instead of a wrong number
+const fmtKg = (n) =>
+  n === undefined || n === null || Number.isNaN(Number(n))
+    ? "—"
+    : Number(n).toFixed(2);
+
+const fmtDims = (p) =>
+  `${p.length} × ${p.breadth} × ${p.height} ${p.unit === "in" ? "in" : "cm"}`;
+
+// Items belong to a box by packageId; old/orphaned items fall into Box 1
+const groupItemsByBox = (packages, items) => {
+  const ids = new Set(packages.map((p) => String(p._id)));
+  return packages.map((pkg, i) =>
+    items.filter(
+      (it) =>
+        String(it.packageId) === String(pkg._id) ||
+        (i === 0 && !ids.has(String(it.packageId))),
+    ),
+  );
+};
+
+// Page 1 table: one row per box
+const buildPackagesRows = (packages) => {
+  let total = 0;
   const rows = packages
-    .map((pkg, index) => {
-      totalWeight += Number(pkg.weight) || 0;
+    .map((pkg, i) => {
+      total += Number(pkg.weight) || 0; // weight = chargeable
       return `
     <tr>
-      <td>Package ${index + 1}</td>
-      <td class="text-right">${pkg.weight} kg</td>
-    </tr>
-  `;
+      <td>Box ${i + 1}</td>
+      <td>${fmtDims(pkg)}</td>
+      <td class="text-right">${fmtKg(pkg.actualWeight)}</td>
+      <td class="text-right">${fmtKg(pkg.volWeight)}</td>
+      <td class="text-right">${fmtKg(pkg.weight)}</td>
+    </tr>`;
     })
     .join("");
+  return { rows, totalWeight: total.toFixed(2) };
+};
 
-  return { rows, totalWeight: totalWeight.toFixed(2) };
+// Page 3: one block per box with its own items
+const buildBoxSections = (packages, items) => {
+  const grouped = groupItemsByBox(packages, items);
+  return packages
+    .map((pkg, i) => {
+      const itemRows =
+        grouped[i]
+          .map(
+            (it) => `
+        <tr>
+          <td>${escapeHtml(it.itemName)}</td>
+          <td>${it.quantity}</td>
+          <td>${it.fragile ? "Yes" : "No"}</td>
+        </tr>`,
+          )
+          .join("") || `<tr><td colspan="3">No items</td></tr>`;
+
+      return `
+    <div class="box-block">
+      <div class="box-title">
+        <span>Box ${i + 1}</span>
+        <span>${fmtDims(pkg)}</span>
+      </div>
+      <div class="box-weights">
+        Actual: <b>${fmtKg(pkg.actualWeight)} kg</b> &nbsp;|&nbsp;
+        Volumetric: <b>${fmtKg(pkg.volWeight)} kg</b> &nbsp;|&nbsp;
+        Charge: <b>${fmtKg(pkg.weight)} kg</b>
+      </div>
+      <table>
+        <tr>
+          <th>Item Name</th>
+          <th style="width:100px;">Quantity</th>
+          <th style="width:100px;">Fragile</th>
+        </tr>
+        ${itemRows}
+      </table>
+    </div>`;
+    })
+    .join("");
 };
 
 const launchBrowser = async () => {
@@ -95,6 +165,7 @@ const pdfWorker = new Worker(
           name: i.itemName,
           qty: i.quantity,
           fragile: i.fragile,
+          packageId: i.packageId ? i.packageId.toString() : null,
         })),
         photoIds: photos.map((p) => p._id.toString()),
       };
@@ -121,18 +192,7 @@ const pdfWorker = new Worker(
       const { rows: packagesRows, totalWeight } = buildPackagesRows(
         jobData.packages,
       );
-
-      const itemRows = items
-        .map(
-          (item) => `
-    <tr>
-      <td>${item.itemName}</td>
-      <td>${item.quantity}</td>
-      <td>${item.fragile ? "Yes" : "No"}</td>
-    </tr>
-  `,
-        )
-        .join("");
+      const boxSections = buildBoxSections(jobData.packages, items);
 
       const photoPages = photos
         .map(
@@ -166,11 +226,11 @@ const pdfWorker = new Worker(
           receiverCity: jobData.receiverCity,
           receiverZipCode: jobData.receiverZipCode,
           receiverPhone: jobData.receiverNumber,
-          itemRows,
+          boxSections,
           packagesRows,
           totalWeight,
-          numberOfPackages: jobData.numberOfPackages,
-          packages: jobData.numberOfPackages,
+          numberOfPackages: jobData.packages.length,
+          packages: jobData.packages.length,
           photoPages,
           total: displayTotal,
           cell: process.env.CELL,
