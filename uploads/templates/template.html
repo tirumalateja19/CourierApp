@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Package Reciept</title>
+  <title>Consignment Receipt – {{referenceNo}}</title>
   <style>
     * {
       box-sizing: border-box;
@@ -196,6 +196,12 @@
       display: inline-block;
       font-size: 16px;
       font-weight: 700;
+    }
+
+    .inv-payment-line {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 8px;
     }
 
     .inv-legal-footer {
@@ -429,6 +435,7 @@
       <div class="inv-footer-right">
         <div class="inv-label" style="margin-bottom:6px;">Total Charges</div>
         <div class="inv-badge-total">{{total}}</div>
+        <div class="inv-payment-line">Payment: <b>{{paymentLabel}}</b></div>
       </div>
     </div>
 
@@ -503,6 +510,9 @@
     </div>
     <div class="summary-box">
       Total Charges: <span>{{total}}</span>
+    </div>
+    <div class="summary-box">
+      Payment: <span>{{paymentLabel}}</span>
     </div>
   </div>
 

@@ -45,6 +45,15 @@ const fmtKg = (n) =>
 const fmtDims = (p) =>
   `${p.length} × ${p.breadth} × ${p.height} ${p.unit === "in" ? "in" : "cm"}`;
 
+const PHOTO_LABELS = {
+  id_proof: "ID Proof",
+  waybill: "Waybill",
+  invoice: "Invoice",
+  packed_box: "Packed Box",
+  item_evidence: "Item Evidence",
+  payment_proof: "UPI Payment Proof",
+};
+
 // Items belong to a box by packageId; old/orphaned items fall into Box 1
 const groupItemsByBox = (packages, items) => {
   const ids = new Set(packages.map((p) => String(p._id)));
@@ -150,7 +159,20 @@ const pdfWorker = new Worker(
       if (!jobData) throw new Error("Job not found");
 
       const items = await JobItem.find({ jobId }).sort({ createdAt: 1 });
-      const photos = await JobPhoto.find({ jobId }).sort({ createdAt: 1 });
+      const allPhotos = await JobPhoto.find({ jobId }).sort({ createdAt: 1 });
+
+      const isUpiPaid =
+        jobData.paymentStatus === "paid" && jobData.paymentMethod === "upi";
+
+      // the UPI proof only goes in the PDF when the job is actually paid by UPI
+      const photos = allPhotos.filter(
+        (p) => p.label !== "payment_proof" || isUpiPaid,
+      );
+
+      const paymentLabel =
+        jobData.paymentStatus === "paid"
+          ? `Paid via ${jobData.paymentMethod === "upi" ? "UPI" : "Cash"}`
+          : "Pending";
 
       const sourceData = {
         receiverName: jobData.receiverName,
@@ -159,6 +181,8 @@ const pdfWorker = new Worker(
         receiverZipCode: jobData.receiverZipCode,
         receiverNumber: jobData.receiverNumber,
         price: jobData.price,
+        paymentStatus: jobData.paymentStatus,
+        paymentMethod: jobData.paymentMethod || null,
         packages: jobData.packages,
         numberOfPackages: jobData.numberOfPackages,
         items: items.map((i) => ({
@@ -199,7 +223,7 @@ const pdfWorker = new Worker(
           (photo) => `
     <div class="page photo-page">
       <img src="${photo.fileUrl}" />
-      <div class="photo-caption">${photo.label}</div>
+      <div class="photo-caption">${escapeHtml(PHOTO_LABELS[photo.label] || photo.label)}</div>
     </div>
   `,
         )
@@ -233,6 +257,7 @@ const pdfWorker = new Worker(
           packages: jobData.packages.length,
           photoPages,
           total: displayTotal,
+          paymentLabel,
           cell: process.env.CELL,
           email: process.env.EMAIL,
           guidelines: process.env.HANDLING_GUIDELINES,
