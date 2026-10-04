@@ -111,6 +111,15 @@ const jobs = new mongoose.Schema(
       trim: true,
       maxLength: 6,
     },
+    paymentStatus: {
+      type: String,
+      enum: ["paid", "unpaid"],
+      default: "unpaid",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["cash", "upi"],
+    },
     dispatchedAt: {
       type: String,
       trim: true,

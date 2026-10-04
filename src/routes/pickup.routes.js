@@ -49,7 +49,6 @@ pickupRouter.patch(
         receiverAddress,
         packingStatus,
         status,
-        price,
         receiverCity,
         receiverZipCode,
         receiverCountry,
@@ -60,7 +59,6 @@ pickupRouter.patch(
       if (receiverNumber !== undefined) updates.receiverNumber = receiverNumber;
       if (receiverAddress !== undefined)
         updates.receiverAddress = receiverAddress;
-      if (price !== undefined) updates.price = price;
       if (packingStatus !== undefined) updates.packingStatus = packingStatus;
       if (status !== undefined) updates.status = status;
       if (receiverCity !== undefined) updates.receiverCity = receiverCity;
@@ -94,7 +92,7 @@ pickupRouter.put(
   async (req, res) => {
     try {
       const job = req.job;
-      const { packages, packingStatus, price } = req.body;
+      const { packages, packingStatus} = req.body;
 
       if (
         !Array.isArray(packages) ||
@@ -157,7 +155,6 @@ pickupRouter.put(
       job.packages = cleanPackages;
       job.numberOfPackages = String(cleanPackages.length);
       if (packingStatus !== undefined) job.packingStatus = packingStatus;
-      if (price !== undefined) job.price = String(price);
       await job.save();
 
       await JobItem.deleteMany({ jobId: job._id });
@@ -177,42 +174,6 @@ pickupRouter.put(
   },
 );
 
-//add items
-pickupRouter.post(
-  "/api/jobs/pickup/:id/items",
-  userAuth,
-  verifyPartnerAccess,
-  async (req, res) => {
-    try {
-      const { id } = req.params; // job id
-      const { itemName, quantity, fragile } = req.body;
-
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send("Invalid job id");
-      }
-
-      const item = await JobItem.create({
-        jobId: id,
-        itemName,
-        quantity,
-        fragile,
-      });
-      createAuditLog({
-        jobId: id,
-        actorId: req.user.id,
-        actorRole: req.user.role,
-        actorName: req.user.userName,
-        action: "itemsEdited",
-      });
-      res.status(201).json({ message: "Item added", item });
-    } catch (error) {
-      res
-        .status(400)
-        .json({ message: "Something went wrong", error: error.message });
-    }
-  },
-);
-
 //suggest items
 pickupRouter.get(
   "/api/jobs/pickup/items/suggestions",
@@ -221,78 +182,6 @@ pickupRouter.get(
     try {
       const suggestions = await JobItem.distinct("itemName");
       res.status(200).json({ message: "Fetched successfully", suggestions });
-    } catch (error) {
-      res
-        .status(400)
-        .json({ message: "Something went wrong", error: error.message });
-    }
-  },
-);
-
-//edit items
-pickupRouter.patch(
-  "/api/jobs/pickup/:id/items/:itemId",
-  userAuth,
-  verifyPartnerAccess,
-  async (req, res) => {
-    try {
-      const { id, itemId } = req.params;
-      const { itemName, quantity, fragile } = req.body;
-      const updatedItem = await JobItem.findOneAndUpdate(
-        { _id: itemId, jobId: id },
-        { itemName: itemName, quantity: quantity, fragile: fragile },
-        { returnDocument: "after", runValidators: true },
-      );
-
-      if (!updatedItem) {
-        return res.status(404).json({ message: "Item not found for this job" });
-      }
-      createAuditLog({
-        jobId: id,
-        actorId: req.user.id,
-        actorRole: req.user.role,
-        actorName: req.user.userName,
-        action: "itemsEdited",
-      });
-      res.status(200).json({ message: "Item edited", updatedItem });
-    } catch (error) {
-      res
-        .status(400)
-        .json({ message: "Something went wrong", error: error.message });
-    }
-  },
-);
-
-//deleted items
-pickupRouter.delete(
-  "/api/jobs/pickup/:id/items/:itemId",
-  userAuth,
-  verifyPartnerAccess,
-  async (req, res) => {
-    try {
-      const { id, itemId } = req.params;
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).send("Invalid");
-      }
-      if (!mongoose.Types.ObjectId.isValid(itemId)) {
-        return res.status(400).send("Invalid");
-      }
-      const deletedItem = await JobItem.findOneAndDelete({
-        _id: itemId,
-        jobId: id,
-      });
-
-      if (!deletedItem) {
-        return res.status(404).json({ message: "Item not found for this job" });
-      }
-      createAuditLog({
-        jobId: id,
-        actorId: req.user.id,
-        actorRole: req.user.role,
-        actorName: req.user.userName,
-        action: "itemsEdited",
-      });
-      res.status(200).json({ message: "Item deleted successfully" });
     } catch (error) {
       res
         .status(400)
@@ -332,10 +221,21 @@ pickupRouter.post(
         "invoice",
         "packed_box",
         "item_evidence",
-        "payment_reciept",
+        "payment_proof",
       ];
       if (!validLabels.includes(label)) {
         return res.status(400).json({ message: "Invalid label" });
+      }
+
+      if (label === "payment_proof") {
+        const oldProofs = await JobPhoto.find({
+          jobId: id,
+          label: "payment_proof",
+        });
+        for (const p of oldProofs) {
+          if (p.publicId) await cloudinary.uploader.destroy(p.publicId);
+        }
+        await JobPhoto.deleteMany({ jobId: id, label: "payment_proof" });
       }
 
       const photo = await JobPhoto.create({
@@ -401,7 +301,96 @@ pickupRouter.delete(
       }
       await JobPhoto.deleteOne({ _id: photoId });
 
-      res.status(200).json({ message: "Photo deleted successfully" });
+      // Deleting the UPI proof voids the payment: ask for it again
+      let paymentReset = false;
+      if (
+        photo.label === "payment_proof" &&
+        job.paymentStatus === "paid" &&
+        job.paymentMethod === "upi"
+      ) {
+        job.paymentStatus = "unpaid";
+        job.paymentMethod = undefined;
+        job.price = "0";
+        await job.save();
+        paymentReset = true;
+      }
+
+      res.status(200).json({
+        message: paymentReset
+          ? "Photo deleted. Payment reset to not paid"
+          : "Photo deleted successfully",
+        paymentReset,
+        jobData: job,
+      });
+    } catch (error) {
+      res
+        .status(400)
+        .json({ message: "Something went wrong", error: error.message });
+    }
+  },
+);
+
+//payment
+pickupRouter.put(
+  "/api/jobs/pickup/:id/payment",
+  userAuth,
+  verifyPartnerAccess,
+  async (req, res) => {
+    try {
+      const job = req.job; // set by verifyPartnerAccess
+      if (job.locked)
+        return res
+          .status(403)
+          .json({ message: "Job is locked, cannot edit payment" });
+      const { paymentStatus, paymentMethod, price } = req.body ?? {};
+
+      if (!["paid", "unpaid"].includes(paymentStatus))
+        return res.status(400).json({ message: "Select paid or not paid" });
+
+      if (paymentStatus === "unpaid") {
+        job.paymentStatus = "unpaid";
+        job.paymentMethod = undefined;
+        job.price = "0";
+      } else {
+        if (!["cash", "upi"].includes(paymentMethod))
+          return res.status(400).json({ message: "Select cash or UPI" });
+
+        const amount = Math.round(Number(price) * 100) / 100;
+        if (!Number.isFinite(amount) || amount <= 0)
+          return res.status(400).json({ message: "Enter the amount received" });
+
+        if (paymentMethod === "upi") {
+          const proof = await JobPhoto.findOne({
+            jobId: job._id,
+            label: "payment_proof",
+          });
+          if (!proof)
+            return res
+              .status(400)
+              .json({ message: "Add the UPI payment photo first" });
+        }
+
+        job.paymentStatus = "paid";
+        job.paymentMethod = paymentMethod;
+        job.price = String(amount);
+      }
+
+      await job.save();
+
+      // proof only makes sense for UPI: remove a stale one if the method changed
+      if (!(job.paymentStatus === "paid" && job.paymentMethod === "upi")) {
+        const stale = await JobPhoto.find({
+          jobId: job._id,
+          label: "payment_proof",
+        });
+        for (const p of stale) {
+          if (p.publicId) await cloudinary.uploader.destroy(p.publicId);
+        }
+        if (stale.length)
+          await JobPhoto.deleteMany({ jobId: job._id, label: "payment_proof" });
+      }
+
+      res.status(200).json({ message: "Payment saved", jobData: job });
     } catch (error) {
       res
         .status(400)
