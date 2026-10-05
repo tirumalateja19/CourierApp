@@ -144,14 +144,14 @@ partnerRouter.get(
       }
       const jobData = await Job.findById(id);
       if (!jobData) {
-        res.status(404).json({ message: "Job not found" });
+        return res.status(404).json({ message: "Job not found" });
       }
       const items = await JobItem.find({ jobId: id });
       res
         .status(200)
         .json({ message: "Job Fetch Successfull", jobData, items });
     } catch (error) {
-      res.status(400).json({ error: err.message });
+      res.status(400).json({ error: error.message });
     }
   },
 );

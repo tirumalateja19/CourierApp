@@ -22,27 +22,58 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       clientCity,
       approxWeight,
       networkName,
+      mapLink,
+      partnerId,
     } = req.body;
+
     if (
       !clientName ||
       !clientNumber ||
       !clientAddress ||
       !clientCity ||
       !approxWeight ||
-      !networkName
+      !networkName ||
+      !partnerId
     ) {
       return res.status(400).json({ message: "All fields are required" });
     }
+
+    const link = typeof mapLink === "string" ? mapLink.trim() : "";
+    if (link && !/^https?:\/\/\S+$/i.test(link)) {
+      return res
+        .status(400)
+        .json({ message: "Map link must be a valid http(s) URL" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+      return res.status(400).json({ message: "Invalid partner" });
+    }
+    const partnerData = await Partner.findById(partnerId);
+    if (!partnerData) {
+      return res.status(404).json({ message: "Partner not found" });
+    }
+    if (partnerData.isDeactivated) {
+      return res
+        .status(406)
+        .json({ message: "Cannot assign, Partner deactivated!" });
+    }
+
     const job = new Job({
-      clientName: clientName,
-      clientNumber: clientNumber,
-      clientAddress: clientAddress,
-      clientCity: clientCity,
-      approxWeight: approxWeight,
+      clientName,
+      clientNumber,
+      clientAddress,
+      clientCity,
+      approxWeight,
+      networkName,
+      mapLink: link,
       scheduledTime: new Date(),
-      networkName: networkName,
+      assignedToId: partnerData._id,
+      assignedToRole: "partner",
+      assignedTo: partnerData.userName,
+      status: "Assigned",
     });
     await job.save();
+
     createAuditLog({
       jobId: job._id,
       actorId: req.user.id,
@@ -50,7 +81,21 @@ jobRouter.post("/api/jobs/new-job", userAuth, isAdmin, async (req, res) => {
       actorName: req.user.userName,
       action: "jobCreated",
     });
-    res.status(201).json({ message: "Job created successfully",jobData: job });
+    createAuditLog({
+      jobId: job._id,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      actorName: req.user.userName,
+      action: "jobAssigned",
+      previousStatus: "Created",
+      newStatus: "Assigned",
+    });
+
+    res.status(201).json({
+      message: "Job created and assigned successfully",
+      jobData: job,
+      partnerPhone: partnerData.contactNumber,
+    });
   } catch (err) {
     res.status(400).send(err.message);
   }
@@ -79,7 +124,11 @@ jobRouter.get("/api/jobs", userAuth, isAdmin, async (req, res) => {
     if (fromDate || toDate) {
       filter.createdAt = {};
       if (fromDate) filter.createdAt.$gte = new Date(fromDate);
-      if (toDate) filter.createdAt.$lte = new Date(toDate);
+      if (toDate) {
+        const end = new Date(toDate);
+        end.setUTCHours(23, 59, 59, 999);
+        filter.createdAt.$lte = end;
+      }
     }
 
     const [totalJobs, totalCount] = await Promise.all([
@@ -120,8 +169,13 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
         .json({ message: "Cannot assign, Partner deactivated!" });
     }
     const existingJob = await Job.findById(id);
-    if (!existingJob) {
-      return res.status(404).json({ message: "Job not found" });
+    if (
+      !["Created", "Assigned"].includes(existingJob.status) ||
+      existingJob.locked
+    ) {
+      return res
+        .status(409)
+        .json({ message: "This job can no longer be reassigned" });
     }
     const jobData = await Job.findByIdAndUpdate(
       id,
@@ -143,14 +197,171 @@ jobRouter.patch("/api/jobs/:id/assign", userAuth, isAdmin, async (req, res) => {
       actorName: req.user.userName,
       action: "jobAssigned",
       previousStatus: existingJob.status,
-      newStatus: "assigned",
+      newStatus: "Assigned",
     });
 
-    res.status(200).json({ message: "Job Assigned Successfully", jobData });
+    res.status(200).json({
+      message: "Job Assigned Successfully",
+      jobData,
+      partnerPhone: partnerData.contactNumber,
+    });
   } catch (error) {
     res
       .status(400)
       .json({ message: "Something went wrong", error: error.message });
+  }
+});
+
+//partner-contact
+jobRouter.get(
+  "/api/jobs/:id/partner-contact",
+  userAuth,
+  isAdmin,
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({ message: "Invalid job" });
+      }
+      const job = await Job.findById(id).select("assignedToId");
+      if (!job || !job.assignedToId) {
+        return res.status(404).json({ message: "Job or partner not found" });
+      }
+      const partner = await Partner.findById(job.assignedToId).select(
+        "contactNumber",
+      );
+      if (!partner) {
+        return res.status(404).json({ message: "Partner not found" });
+      }
+      res.status(200).json({ partnerPhone: partner.contactNumber });
+    } catch (err) {
+      res.status(400).json({ message: "Something went wrong" });
+    }
+  },
+);
+
+const EDITABLE_JOB_FIELDS = [
+  "clientName",
+  "clientNumber",
+  "clientAddress",
+  "clientCity",
+  "approxWeight",
+  "networkName",
+  "mapLink",
+];
+
+//edit job-data
+jobRouter.patch("/api/jobs/:id", userAuth, isAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { partnerId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid job" });
+    }
+
+    const job = await Job.findById(id);
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
+    if (job.locked || job.cancelled || job.isArchived) {
+      return res
+        .status(403)
+        .json({ message: "This job can no longer be edited" });
+    }
+
+    // Partner change: validate everything before touching the document
+    let newPartner = null;
+    if (
+      partnerId !== undefined &&
+      String(partnerId) !== String(job.assignedToId)
+    ) {
+      if (!["Created", "Assigned"].includes(job.status)) {
+        return res.status(409).json({
+          message: "The partner can only be changed before pickup",
+        });
+      }
+      if (!mongoose.Types.ObjectId.isValid(partnerId)) {
+        return res.status(400).json({ message: "Invalid partner" });
+      }
+      newPartner = await Partner.findById(partnerId);
+      if (!newPartner) {
+        return res.status(404).json({ message: "Partner not found" });
+      }
+      if (newPartner.isDeactivated) {
+        return res
+          .status(406)
+          .json({ message: "Cannot assign, Partner deactivated!" });
+      }
+    }
+
+    for (const field of EDITABLE_JOB_FIELDS) {
+      const raw = req.body[field];
+      if (raw === undefined) continue; // field not sent, leave as is
+      if (typeof raw !== "string") {
+        return res.status(400).json({ message: `${field} must be text` });
+      }
+      const value = raw.trim();
+      if (field !== "mapLink" && !value) {
+        return res.status(400).json({ message: `${field} cannot be empty` });
+      }
+      if (field === "mapLink" && value && !/^https?:\/\/\S+$/i.test(value)) {
+        return res
+          .status(400)
+          .json({ message: "Map link must be a valid http(s) URL" });
+      }
+      job[field] = value;
+    }
+
+    const detailsChanged = EDITABLE_JOB_FIELDS.some((f) => job.isModified(f));
+    const previousStatus = job.status;
+
+    if (newPartner) {
+      job.assignedToId = newPartner._id;
+      job.assignedToRole = "partner";
+      job.assignedTo = newPartner.userName;
+      job.status = "Assigned";
+    }
+
+    // nothing actually changed, so skip the save (avoids a pointless updatedAt bump)
+    if (!job.isModified()) {
+      return res
+        .status(200)
+        .json({ message: "No changes", jobData: job, partnerPhone: null });
+    }
+
+    await job.save(); // runs schema validators (e.g. clientNumber maxLength)
+
+    const actor = {
+      jobId: job._id,
+      actorId: req.user.id,
+      actorRole: req.user.role,
+      actorName: req.user.userName,
+    };
+    if (detailsChanged) {
+      createAuditLog({ ...actor, action: "jobEdited" });
+    }
+    if (newPartner) {
+      createAuditLog({
+        ...actor,
+        action: "jobAssigned",
+        previousStatus,
+        newStatus: "Assigned",
+      });
+    }
+
+    res.status(200).json({
+      message: newPartner
+        ? "Job updated and reassigned successfully"
+        : "Job updated successfully",
+      jobData: job,
+      // only set when the partner changed, so the frontend knows to offer WhatsApp
+      partnerPhone: newPartner ? newPartner.contactNumber : null,
+    });
+  } catch (err) {
+    res
+      .status(400)
+      .json({ message: "Something went wrong", error: err.message });
   }
 });
 

@@ -22,6 +22,11 @@ const jobs = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    mapLink: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     scheduledTime: {
       type: String,
       trim: true,
