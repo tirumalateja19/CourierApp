@@ -27,6 +27,15 @@ const podSlip = new mongoose.Schema(
       type: Number,
       default: 1,
     },
+    count: {
+      type: Number,
+    },
+    fileName: {
+      type: String,
+    },
+    publicId: {
+      type: String,
+    },
   },
   {
     timestamps: true,

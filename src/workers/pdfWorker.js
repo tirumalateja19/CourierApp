@@ -2,7 +2,6 @@ import { Worker } from "bullmq";
 import puppeteerCore from "puppeteer-core";
 import chromium from "@sparticuz/chromium";
 import connection from "../config/redis.js";
-import cloudinary from "../config/cloudinary.js";
 import renderTemplate from "../utils/renderTemplate.js";
 import path from "path";
 import crypto from "crypto";
@@ -11,23 +10,11 @@ import { Job } from "../model/Job.model.js";
 import { JobItem } from "../model/JobItem.model.js";
 import { JobPhoto } from "../model/JobPhoto.model.js";
 import createAuditLog from "../utils/createAuditLog.js";
-
-const uploadPdfToCloudinary = (buffer, folder) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        resource_type: "raw",
-        folder,
-        public_id: `podslip_${Date.now()}.pdf`,
-      },
-      (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
-      },
-    );
-    stream.end(buffer);
-  });
-};
+import {
+  buildPodFileName,
+  uploadPodPdf,
+  deletePodPdf,
+} from "../utils/podNaming.js";
 
 const escapeHtml = (s) =>
   String(s ?? "")
@@ -285,34 +272,54 @@ const pdfWorker = new Worker(
         .update(pdfBuffer)
         .digest("hex");
 
+      // Name the file ({partner}_{timestamp}_{count}_v{version}.pdf) and upload it.
+      // The counters are only bumped here, after a successful render, so an
+      // "unchanged" run or a failed render never uses up a number.
       let uploadResult;
+      let naming;
       try {
-        uploadResult = await uploadPdfToCloudinary(
-          pdfBuffer,
-          "pickitup/podslips",
-        );
+        naming = await buildPodFileName({
+          partnerName: jobData.assignedTo || generatedByUsername,
+          partnerId: jobData.assignedToId,
+          jobId,
+        });
+        uploadResult = await uploadPodPdf(pdfBuffer, naming.fileName);
       } catch (err) {
         await Job.findByIdAndUpdate(jobId, { podSlipStatus: "failed" });
         throw err;
       }
 
-      await PodSlip.findOneAndUpdate(
-        { jobId },
-        {
-          jobId,
-          generatedById,
-          pdfUrl: uploadResult.secure_url,
-          pdfHash,
-          sourceHash,
-        },
-        { upsert: true, returnDocument: "after" },
-      );
+      try {
+        await PodSlip.findOneAndUpdate(
+          { jobId },
+          {
+            jobId,
+            generatedById,
+            pdfUrl: uploadResult.secure_url,
+            publicId: uploadResult.public_id,
+            fileName: naming.fileName,
+            count: naming.count,
+            version: naming.version,
+            pdfHash,
+            sourceHash,
+          },
+          { upsert: true, returnDocument: "after" },
+        );
+      } catch (err) {
+        // nothing points at the new file, so remove it before failing
+        await deletePodPdf({ publicId: uploadResult.public_id });
+        await Job.findByIdAndUpdate(jobId, { podSlipStatus: "failed" });
+        throw err;
+      }
 
       await Job.findByIdAndUpdate(jobId, {
         podSlipGenerated: true,
         podGeneratedBy: generatedByUsername,
         podSlipStatus: "ready",
       });
+
+      // the previous file is no longer referenced anywhere (best effort)
+      if (existingPodSlip) await deletePodPdf(existingPodSlip);
 
       createAuditLog({
         jobId,
